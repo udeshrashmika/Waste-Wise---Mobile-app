@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 // Ensure these paths match your folder structure exactly
 import 'features/auth/screens/role_selection_screen.dart';
-import 'features/auth/screens/login_screen.dart';
 
 void main() {
   // Required if you add Firebase or any native plugins later
