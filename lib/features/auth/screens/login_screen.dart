@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:waste_wise/features/resident/screens/resident_home.dart';
 import 'register_screen.dart';
 
-import 'package:waste_wise/lib/features/resident/screens/resident_screen.dart';
-
 class UniversalLoginScreen extends StatelessWidget {
   final String userRole;
 
