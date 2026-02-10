@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'register_screen.dart';
+
 class UniversalLoginScreen extends StatelessWidget {
   final String userRole;
 
@@ -7,7 +9,6 @@ class UniversalLoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Branding colors aligned with NSBM Waste-Wise
     const Color brandGreen = Color(0xFF1B5E36);
     const Color accentGreen = Color(0xFF2D8B49);
 
@@ -23,7 +24,6 @@ class UniversalLoginScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: Center(
-          // Center content for better UI balance
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 30.0),
             child: Column(
@@ -73,9 +73,7 @@ class UniversalLoginScreen extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      // TODO: Implement Forgot Password logic
-                    },
+                    onPressed: () {},
                     child: const Text(
                       'Forgot Password?',
                       style: TextStyle(color: accentGreen),
@@ -84,7 +82,6 @@ class UniversalLoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 30),
 
-                // Login Button
                 SizedBox(
                   width: 180,
                   height: 55,
@@ -116,7 +113,12 @@ class UniversalLoginScreen extends StatelessWidget {
                       const Text("Don't have an account? "),
                       TextButton(
                         onPressed: () {
-                          // TODO: Navigate to Resident Registration
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterScreen(),
+                            ),
+                          );
                         },
                         child: const Text(
                           'Create account',
@@ -124,6 +126,18 @@ class UniversalLoginScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(
+                      "Contact Admin for $userRole account access",
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -133,17 +147,10 @@ class UniversalLoginScreen extends StatelessWidget {
     );
   }
 
-  // Logic to handle role-based navigation
   void _handleLogin(BuildContext context) {
-    // 1. Authenticate with backend
-    // 2. On success, navigate to the specific dashboard
     if (userRole == 'Admin') {
-      // Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminDashboard()));
     } else if (userRole == 'Truck Driver') {
-      // Navigator.push(context, MaterialPageRoute(builder: (context) => const DriverMapScreen()));
-    } else {
-      // Navigator.push(context, MaterialPageRoute(builder: (context) => const ResidentHome()));
-    }
+    } else {}
   }
 
   Widget _buildInputField({
