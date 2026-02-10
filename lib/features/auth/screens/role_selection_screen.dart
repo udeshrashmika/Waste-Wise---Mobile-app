@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart'; // Make sure this import is correct for your folder structure
 
-class RoleSelectionScreen extends StatefulWidget {
+import 'package:waste_wise/features/auth/screens/login_screen.dart';
+
+class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
-
-  @override
-  State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
-}
-
-class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
-  // 1. Variable to store the user's choice.
-  // It is empty initially.
-  String _selectedRole = '';
 
   static const Color primaryGreen = Color(0xFF2D8B49);
   static const Color darkGreen = Color(0xFF1B5E36);
@@ -39,75 +31,49 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 ),
                 const SizedBox(height: 60),
 
-                // --- ROLE BUTTONS ---
-
-                // Resident Button
+                // Button: RESIDENTS
                 _buildRoleButton(
+                  context: context,
                   icon: Icons.groups_3_outlined,
-                  label: 'Resident',
+                  label: 'RESIDENTS',
                   color: primaryGreen,
+                  onTap: () => _navigateToLogin(context, 'Resident'),
                 ),
                 const SizedBox(height: 20),
 
-                // Admin Button
+                // Button: ADMIN
                 _buildRoleButton(
+                  context: context,
                   icon: Icons.person_search_outlined,
-                  label: 'Admin',
+                  label: 'ADMIN',
                   color: darkGreen,
+                  onTap: () => _navigateToLogin(context, 'Admin'),
                 ),
                 const SizedBox(height: 20),
 
-                // Truck Driver Button
+                // Button: TRUCK DRIVER
                 _buildRoleButton(
+                  context: context,
                   icon: Icons.local_shipping_outlined,
-                  label: 'Truck Driver',
+                  label: 'TRUCK DRIVER',
                   color: darkGreen,
+                  onTap: () => _navigateToLogin(context, 'Truck Driver'),
                 ),
 
                 const SizedBox(height: 60),
 
-                // --- NAVIGATION BUTTON (THE FIX) ---
-
-                // 2. We wrap the Container in a GestureDetector to make it clickable
-                GestureDetector(
-                  onTap: () {
-                    // 3. Check if a role is selected before navigating
-                    if (_selectedRole.isNotEmpty) {
-                      print(
-                        "Navigating to login as $_selectedRole",
-                      ); // Debug print
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              UniversalLoginScreen(userRole: _selectedRole),
-                        ),
-                      );
-                    } else {
-                      // 4. Show a message if no role is selected
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Please select a role first!"),
-                          backgroundColor: Colors.red,
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    }
-                  },
-                  child: Container(
-                    width: 75,
-                    height: 35,
-                    decoration: BoxDecoration(
-                      // Change color to Grey if nothing selected, Green if selected
-                      color: _selectedRole.isEmpty ? Colors.grey : darkGreen,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_forward,
-                      color: Colors.white,
-                      size: 24,
-                    ),
+                // Bottom Navigation Pill
+                Container(
+                  width: 75,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    color: darkGreen,
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                    size: 24,
                   ),
                 ),
               ],
@@ -118,22 +84,26 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     );
   }
 
-  // Helper widget to build the selection buttons
+  // Unified navigation function
+  void _navigateToLogin(BuildContext context, String role) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        // Passes the 'role' string directly to the constructor
+        builder: (context) => UniversalLoginScreen(userRole: role),
+      ),
+    );
+  }
+
   Widget _buildRoleButton({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required Color color,
+    required VoidCallback onTap,
   }) {
-    bool isSelected = _selectedRole == label;
-
     return InkWell(
-      onTap: () {
-        // 5. Update the state when clicked
-        setState(() {
-          _selectedRole = label;
-        });
-        print("Selected Role: $_selectedRole");
-      },
+      onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         width: double.infinity,
@@ -141,8 +111,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(12),
-          // Add a border if selected so you can SEE it is selected
-          border: isSelected ? Border.all(color: Colors.black, width: 4) : null,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -151,7 +119,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               Icon(icon, color: Colors.white, size: 30),
               const SizedBox(width: 20),
               Text(
-                label.toUpperCase(),
+                label,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -159,10 +127,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   letterSpacing: 1.1,
                 ),
               ),
-              const Spacer(),
-              // Show checkmark if selected
-              if (isSelected)
-                const Icon(Icons.check_circle, color: Colors.white),
             ],
           ),
         ),
