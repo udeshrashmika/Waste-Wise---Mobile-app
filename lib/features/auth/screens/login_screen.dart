@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'package:waste_wise/features/resident/screens/resident_home.dart';
 import 'register_screen.dart';
+
+import 'package:waste_wise/lib/features/resident/screens/resident_screen.dart';
 
 class UniversalLoginScreen extends StatelessWidget {
   final String userRole;
@@ -38,7 +40,6 @@ class UniversalLoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 Text(
                   'Login as $userRole',
                   style: const TextStyle(
@@ -58,7 +59,6 @@ class UniversalLoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 40),
-
                 _buildInputField(
                   icon: Icons.email_outlined,
                   hint: 'Email or Phone',
@@ -69,7 +69,6 @@ class UniversalLoginScreen extends StatelessWidget {
                   hint: 'Password',
                   isPassword: true,
                 ),
-
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -81,7 +80,6 @@ class UniversalLoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 30),
-
                 SizedBox(
                   width: 180,
                   height: 55,
@@ -105,7 +103,6 @@ class UniversalLoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 25),
-
                 if (userRole == 'Resident')
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -150,7 +147,12 @@ class UniversalLoginScreen extends StatelessWidget {
   void _handleLogin(BuildContext context) {
     if (userRole == 'Admin') {
     } else if (userRole == 'Truck Driver') {
-    } else {}
+    } else if (userRole == 'Resident') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ResidentHomeScreen()),
+      );
+    }
   }
 
   Widget _buildInputField({
