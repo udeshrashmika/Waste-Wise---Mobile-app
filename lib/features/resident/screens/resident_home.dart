@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'scaned_result_screen.dart'; // <--- THIS WAS MISSING. I ADDED IT HERE.
 
 class ResidentHomeScreen extends StatelessWidget {
   const ResidentHomeScreen({super.key});
@@ -8,7 +9,7 @@ class ResidentHomeScreen extends StatelessWidget {
     const Color brandGreen = Color(0xFF1B5E36);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Off-white for a cleaner look
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -24,16 +25,13 @@ class ResidentHomeScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 24),
 
-            // 1. AI Scan Button - Updated for Image Recognition
+            // 1. AI Scan Button
             _buildAIScanButton(context, brandGreen),
 
             const SizedBox(height: 24),
 
-            // 2. Bin Status Card - Fills the "Empty" space
-            _buildBinStatusCard(
-              "Half-Full",
-              Colors.orange,
-            ), // Change to "Full" or "Empty" later
+            // 2. Bin Status Card
+            _buildBinStatusCard("Half-Full", Colors.orange),
 
             const SizedBox(height: 24),
 
@@ -64,10 +62,15 @@ class ResidentHomeScreen extends StatelessWidget {
     );
   }
 
-  // UPDATED: No more QR code - uses Camera/AI theme
+  // UPDATED: Now navigates to ScannedResultScreen
   Widget _buildAIScanButton(BuildContext context, Color color) {
     return InkWell(
-      onTap: () {}, // Future: Trigger Camera AI
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => ScannedResultScreen()),
+        );
+      },
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(24),
@@ -104,7 +107,6 @@ class ResidentHomeScreen extends StatelessWidget {
     );
   }
 
-  // NEW: Visual Status Indicator (Full/Half/Empty)
   Widget _buildBinStatusCard(String status, Color statusColor) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -147,9 +149,7 @@ class ResidentHomeScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: const Border(
-          left: BorderSide(color: Colors.blue, width: 6),
-        ), // Visual accent
+        border: const Border(left: BorderSide(color: Colors.blue, width: 6)),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
         ],
@@ -180,7 +180,6 @@ class ResidentHomeScreen extends StatelessWidget {
     );
   }
 
-  // Standard elements... (BottomNav and NotificationItem helpers remain same)
   Widget _buildNotificationItem(
     IconData icon,
     Color color,
