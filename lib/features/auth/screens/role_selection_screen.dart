@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../truck_driver/screens/driver_main_layout.dart';
 import 'package:waste_wise/features/auth/screens/login_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
@@ -31,7 +32,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 60),
 
-                // Button: RESIDENTS
+               
                 _buildRoleButton(
                   context: context,
                   icon: Icons.groups_3_outlined,
@@ -41,7 +42,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                // Button: ADMIN
+                
                 _buildRoleButton(
                   context: context,
                   icon: Icons.person_search_outlined,
@@ -51,18 +52,25 @@ class RoleSelectionScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                // Button: TRUCK DRIVER
+                
                 _buildRoleButton(
                   context: context,
                   icon: Icons.local_shipping_outlined,
                   label: 'TRUCK DRIVER',
                   color: darkGreen,
-                  onTap: () => _navigateToLogin(context, 'Truck Driver'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DriverMainLayout(),
+                      ),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 60),
 
-                // Bottom Navigation Pill
+                
                 Container(
                   width: 75,
                   height: 35,
@@ -84,12 +92,11 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // Unified navigation function
+  
   void _navigateToLogin(BuildContext context, String role) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        // Passes the 'role' string directly to the constructor
         builder: (context) => UniversalLoginScreen(userRole: role),
       ),
     );

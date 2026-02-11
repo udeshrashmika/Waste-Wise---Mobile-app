@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:waste_wise/features/resident/screens/resident_home.dart';
 import 'register_screen.dart';
+import '../../truck_driver/screens/driver_home.dart';
 
 class UniversalLoginScreen extends StatelessWidget {
   final String userRole;
@@ -142,9 +143,16 @@ class UniversalLoginScreen extends StatelessWidget {
     );
   }
 
+  // ----------- මම වෙනස් කලේ මේ කොටස විතරයි -----------
   void _handleLogin(BuildContext context) {
     if (userRole == 'Admin') {
+       // Admin ලොගින් එක පසුවට
     } else if (userRole == 'Truck Driver') {
+      // මෙන්න Truck Driver ව එයාගේ Home Page එකට යවන කෝඩ් එක
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
+      );
     } else if (userRole == 'Resident') {
       Navigator.pushReplacement(
         context,
@@ -152,6 +160,7 @@ class UniversalLoginScreen extends StatelessWidget {
       );
     }
   }
+  // ----------------------------------------------------
 
   Widget _buildInputField({
     required IconData icon,
