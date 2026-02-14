@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// 👇 මේ Import එක අනිවාර්යයෙන් දාගන්න
 import 'package:waste_wise/features/auth/screens/role_selection_screen.dart';
 
 class DriverProfileScreen extends StatelessWidget {
@@ -26,7 +25,7 @@ class DriverProfileScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 30),
 
-            // --- Profile Picture ---
+            
             Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -59,7 +58,7 @@ class DriverProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
-            // --- Performance Summary ---
+            
             _buildInfoCard(
               title: "Performance Summary",
               children: [
@@ -92,7 +91,7 @@ class DriverProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // --- Personal Information ---
+            
             _buildInfoCard(
               title: "Personal Information",
               children: [
@@ -118,7 +117,7 @@ class DriverProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // --- Account Actions ---
+            
             _buildInfoCard(
               title: "Account Actions",
               children: [
@@ -142,7 +141,7 @@ class DriverProfileScreen extends StatelessWidget {
     );
   }
 
-  // --- Widgets ---
+ 
 
   Widget _buildInfoCard({
     required String title,
@@ -292,7 +291,7 @@ class DriverProfileScreen extends StatelessWidget {
     );
   }
 
-  // --- Logout Logic (Corrected) ---
+  
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(
@@ -311,7 +310,7 @@ class DriverProfileScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                // 👇 මෙතන තමයි වෙනස: කෙලින්ම Role Selection Screen එකට යන්න
+                
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
