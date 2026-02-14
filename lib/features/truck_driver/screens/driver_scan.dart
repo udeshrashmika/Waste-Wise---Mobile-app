@@ -35,7 +35,6 @@ class DriverScanScreen extends StatelessWidget {
             ),
             const SizedBox(height: 40),
 
-            // Viewfinder Container
             Expanded(
               child: Stack(
                 alignment: Alignment.center,
@@ -78,7 +77,6 @@ class DriverScanScreen extends StatelessWidget {
             ),
             const SizedBox(height: 60),
 
-            // Confirm Disposal Button
             SizedBox(
               width: double.infinity,
               height: 55,
