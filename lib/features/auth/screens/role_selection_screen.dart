@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../truck_driver/screens/driver_main_layout.dart';
 import 'package:waste_wise/features/auth/screens/login_screen.dart';
 
@@ -13,86 +12,117 @@ class RoleSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 40.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.eco_rounded, size: 100, color: primaryGreen),
-                const SizedBox(height: 8),
-                const Text(
-                  'Waste Wise',
-                  style: TextStyle(
-                    color: primaryGreen,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 60),
-
-               
-                _buildRoleButton(
-                  context: context,
-                  icon: Icons.groups_3_outlined,
-                  label: 'RESIDENTS',
-                  color: primaryGreen,
-                  onTap: () => _navigateToLogin(context, 'Resident'),
-                ),
-                const SizedBox(height: 20),
-
-                
-                _buildRoleButton(
-                  context: context,
-                  icon: Icons.person_search_outlined,
-                  label: 'ADMIN',
-                  color: darkGreen,
-                  onTap: () => _navigateToLogin(context, 'Admin'),
-                ),
-                const SizedBox(height: 20),
-
-                
-                _buildRoleButton(
-                  context: context,
-                  icon: Icons.local_shipping_outlined,
-                  label: 'TRUCK DRIVER',
-                  color: darkGreen,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const DriverMainLayout(),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 60),
-
-                
-                Container(
-                  width: 75,
-                  height: 35,
-                  decoration: BoxDecoration(
-                    color: darkGreen,
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ],
+      body: Stack(
+        // Added Stack for background depth
+        children: [
+          // Subtle top background circle to fill empty space
+          Positioned(
+            top: -100,
+            right: -100,
+            child: CircleAvatar(
+              radius: 150,
+              backgroundColor: primaryGreen.withOpacity(0.05),
             ),
           ),
-        ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Enhanced Logo Section
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.eco_rounded,
+                        size: 80,
+                        color: primaryGreen,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'WASTE WISE',
+                      style: TextStyle(
+                        color: darkGreen,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                    const Text(
+                      'For a Cleaner Sri Lanka',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+
+                    // Role Buttons with descriptions to fill the "empty" feel
+                    _buildRoleButton(
+                      context: context,
+                      icon: Icons.groups_3_rounded,
+                      label: 'RESIDENTS',
+                      description: 'Scan waste & check schedules',
+                      color: primaryGreen,
+                      onTap: () => _navigateToLogin(context, 'Resident'),
+                    ),
+                    const SizedBox(height: 20),
+
+                    _buildRoleButton(
+                      context: context,
+                      icon: Icons.admin_panel_settings_rounded,
+                      label: 'ADMIN',
+                      description: 'Monitor system & analytics',
+                      color: darkGreen,
+                      onTap: () => _navigateToLogin(context, 'Admin'),
+                    ),
+                    const SizedBox(height: 20),
+
+                    _buildRoleButton(
+                      context: context,
+                      icon: Icons.local_shipping_rounded,
+                      label: 'TRUCK DRIVER',
+                      description: 'View routes & collection tasks',
+                      color: darkGreen,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DriverMainLayout(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 40),
+                    const Text(
+                      "Select your role to continue",
+                      style: TextStyle(color: Colors.black38, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  
   void _navigateToLogin(BuildContext context, String role) {
     Navigator.push(
       context,
@@ -102,40 +132,72 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
+  // Refined Button Widget
   Widget _buildRoleButton({
     required BuildContext context,
     required IconData icon,
     required String label,
+    required String description,
     required Color color,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         width: double.infinity,
-        height: 65,
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.white, size: 30),
-              const SizedBox(width: 20),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.1,
-                ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
               ),
-            ],
-          ),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white,
+              size: 16,
+            ),
+          ],
         ),
       ),
     );
