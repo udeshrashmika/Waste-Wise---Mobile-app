@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:waste_wise/features/resident/screens/resident_main_layout.dart'; //
-import 'register_screen.dart';
+import 'package:waste_wise/features/resident/screens/resident_main_layout.dart';
+import 'package:waste_wise/features/admin/screens/admin_main_layout.dart';
 import '../../truck_driver/screens/driver_home.dart';
+import 'register_screen.dart';
 
 class UniversalLoginScreen extends StatelessWidget {
   final String userRole;
@@ -131,7 +132,6 @@ class UniversalLoginScreen extends StatelessWidget {
                       style: const TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -145,13 +145,19 @@ class UniversalLoginScreen extends StatelessWidget {
   }
 
   void _handleLogin(BuildContext context) {
-    if (userRole == 'Admin') {
-    } else if (userRole == 'Truck Driver') {
+    final String selectedRole = userRole.trim();
+
+    if (selectedRole == 'Admin') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminMainLayout()),
+      );
+    } else if (selectedRole == 'Truck Driver') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
       );
-    } else if (userRole == 'Resident') {
+    } else if (selectedRole == 'Resident') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const ResidentMainLayout()),

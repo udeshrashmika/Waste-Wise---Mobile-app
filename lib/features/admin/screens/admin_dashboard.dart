@@ -5,106 +5,140 @@ class AdminDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color brandGreen = Color(0xFF1B5E36);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text("Dashboard", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        centerTitle: true,
+        title: const Text(
+          'Waste-Wise Overview',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
+            const Text(
+              "System Pulse",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-              childAspectRatio: 1.4,
-              children: const [
-                _StatCard(title: "Total Disposal Points", value: "28", icon: Icons.delete_outline, color: Colors.black),
-                _StatCard(title: "Active Truck Pickup", value: "12", icon: Icons.local_shipping_outlined, color: Colors.black),
-                _StatCard(title: "Bin Sites Detected", value: "5", icon: Icons.warning_amber_rounded, isAlert: true, color: Colors.red),
-                _StatCard(title: "Avg. Collection Compliance", value: "92%", icon: Icons.check_circle_outline, color: Colors.black),
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.5,
+              children: [
+                _buildStatCard("Total Points", "12", brandGreen),
+                _buildStatCard("Full Bins", "05", Colors.red),
+                _buildStatCard("Half-Full", "04", Colors.orange),
+                _buildStatCard("Active Drivers", "03", Colors.blue),
               ],
             ),
-            const SizedBox(height: 25),
 
-            
-            Container(
-              height: 180,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(20),
-                image: const DecorationImage(
-                  
-                  image: NetworkImage('https://tile.openstreetmap.org/13/5863/3864.png'), 
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: const Center(
-                child: Icon(Icons.location_on, color: Colors.red, size: 40),
-              ),
+            const SizedBox(height: 30),
+
+            const Text(
+              "Garbage Point Locations",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 25),
-
-            
-            const Text("Recent Activity", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 15),
-            
-            _buildActivityItem("Full Bin Detected", "Apartment Block A", Colors.red),
-            _buildActivityItem("Pickup Completed", "Route #12345", Colors.green),
-            _buildActivityItem("New Resident Added", "User ID: 8892", Colors.blue),
+            const SizedBox(height: 16),
+            _buildLocationTile("Block A - Main Bin", 0.95, Colors.red),
+            _buildLocationTile("Block B - South Wing", 0.45, Colors.orange),
+            _buildLocationTile("Block C - Parking Area", 0.85, Colors.red),
+            _buildLocationTile("Basement Chute 01", 0.15, brandGreen),
+            _buildLocationTile("Basement Chute 02", 0.60, Colors.orange),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActivityItem(String title, String subtitle, Color color) {
+  Widget _buildStatCard(String title, String value, Color color) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: Icon(Icons.circle, color: color, size: 15),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        contentPadding: EdgeInsets.zero,
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final bool isAlert;
-  final Color color;
-
-  const _StatCard({required this.title, required this.value, required this.icon, this.isAlert = false, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isAlert ? const Color(0xFFFFF0F0) : const Color(0xFFF5F9F6),
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border(left: BorderSide(color: color, width: 4)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 30, color: color),
-          const SizedBox(height: 10),
-          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationTile(String location, double level, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.location_on_rounded, color: color, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    location,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Text(
+                "${(level * 100).toInt()}%",
+                style: TextStyle(color: color, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: LinearProgressIndicator(
+              value: level,
+              backgroundColor: Colors.grey.shade200,
+              color: color,
+              minHeight: 10,
+            ),
+          ),
         ],
       ),
     );

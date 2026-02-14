@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../truck_driver/screens/driver_main_layout.dart';
 import 'package:waste_wise/features/auth/screens/login_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
@@ -31,14 +30,14 @@ class RoleSelectionScreen extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black12,
                             blurRadius: 20,
-                            offset: const Offset(0, 10),
+                            offset: Offset(0, 10),
                           ),
                         ],
                       ),
@@ -94,14 +93,7 @@ class RoleSelectionScreen extends StatelessWidget {
                       label: 'TRUCK DRIVER',
                       description: 'View routes & collection tasks',
                       color: darkGreen,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const DriverMainLayout(),
-                          ),
-                        );
-                      },
+                      onTap: () => _navigateToLogin(context, 'Truck Driver'),
                     ),
 
                     const SizedBox(height: 40),

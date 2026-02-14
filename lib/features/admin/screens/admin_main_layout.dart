@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-
-
 import 'admin_dashboard.dart';
-import 'admin_schedule.dart';
-import 'admin_resources.dart';
-import 'admin_profile.dart';
+import 'admin_schedule_screen.dart';
+import 'admin_profile_screen.dart';
 
 class AdminMainLayout extends StatefulWidget {
   const AdminMainLayout({super.key});
@@ -15,55 +12,61 @@ class AdminMainLayout extends StatefulWidget {
 
 class _AdminMainLayoutState extends State<AdminMainLayout> {
   int _selectedIndex = 0;
-  final Color brandGreen = const Color(0xFF1B5E36);
+  final Color adminGreen = const Color(0xFF1B5E36);
 
- 
-  final List<Widget> _screens = [
-    const AdminDashboard(),       
-    const AdminScheduleScreen(),  
-    const AdminResourcesScreen(), 
-    const AdminProfileScreen(),   
+  final List<Widget> _adminPages = [
+    const AdminDashboard(),
+    const AdminScheduleScreen(),
+    const AdminProfileScreen(),
   ];
-  
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
-      body: _screens.isNotEmpty 
-          ? _screens[_selectedIndex] 
-          : const Center(child: CircularProgressIndicator()), 
-      
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: brandGreen,
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
-            label: 'DASHBOARD',
+      body: IndexedStack(index: _selectedIndex, children: _adminPages),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: adminGreen,
+          unselectedItemColor: Colors.grey,
+          selectedIconTheme: const IconThemeData(size: 32),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            activeIcon: Icon(Icons.calendar_month),
-            label: 'SCHEDULE',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_suggest_outlined),
-            activeIcon: Icon(Icons.settings_suggest),
-            label: 'RESOURCES',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'PROFILE',
-          ),
-        ],
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.grid_view_outlined),
+              activeIcon: Icon(Icons.grid_view_rounded),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_today_outlined),
+              activeIcon: Icon(Icons.calendar_today_rounded),
+              label: 'Schedule',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.admin_panel_settings_outlined),
+              activeIcon: Icon(Icons.admin_panel_settings_rounded),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }
