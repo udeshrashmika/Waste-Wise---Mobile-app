@@ -29,61 +29,61 @@ class DriverProfileScreen extends StatelessWidget {
             Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 4),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
               child: CircleAvatar(
-                radius: 50,
+                radius: 55,
                 backgroundColor: Colors.grey.shade200,
                 backgroundImage: const NetworkImage(
                   'https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
                 ),
                 onBackgroundImageError: (_, __) {},
-                child: const Icon(Icons.person, size: 50, color: Colors.grey),
+                child: const Icon(Icons.person, size: 55, color: Colors.grey),
               ),
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 20),
             const Text(
               "Rohan Perera",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const Text(
-              "Truck Driver | ID: 12345",
-              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
+            const SizedBox(height: 5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: brandGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                "Truck Driver | ID: 12345",
+                style: TextStyle(
+                  color: brandGreen,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 35),
 
             
             _buildInfoCard(
               title: "Performance Summary",
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    children: [
-                      _buildStatItem(
-                        Icons.local_shipping_rounded,
-                        "Total Trips",
-                        "250",
-                        brandGreen,
-                      ),
-                      Container(
-                        width: 1,
-                        height: 40,
-                        color: Colors.grey.shade300,
-                      ),
-                      _buildStatItem(
-                        Icons.star_rounded,
-                        "Rating",
-                        "4.8",
-                        Colors.amber,
-                      ),
-                    ],
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  child: Center(
+                    child: _buildFeaturedStat(
+                      Icons.local_shipping_rounded,
+                      "Total Trips Completed",
+                      "250",
+                      brandGreen,
+                    ),
                   ),
                 ),
               ],
@@ -102,7 +102,7 @@ class DriverProfileScreen extends StatelessWidget {
                   brandGreen,
                 ),
                 Divider(
-                  height: 25,
+                  height: 30,
                   thickness: 0.5,
                   color: Colors.grey.shade300,
                 ),
@@ -150,15 +150,15 @@ class DriverProfileScreen extends StatelessWidget {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -170,14 +170,52 @@ class DriverProfileScreen extends StatelessWidget {
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.grey,
-              fontSize: 12,
-              letterSpacing: 1.0,
+              fontSize: 11,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
           ...children,
         ],
       ),
+    );
+  }
+
+  Widget _buildFeaturedStat(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 32),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -193,7 +231,7 @@ class DriverProfileScreen extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 22),
         ),
@@ -217,38 +255,6 @@ class DriverProfileScreen extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildStatItem(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
