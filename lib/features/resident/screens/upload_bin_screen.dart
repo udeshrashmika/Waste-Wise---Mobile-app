@@ -1,6 +1,6 @@
-import 'dart:io'; // Needed to work with files
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // Import the plugin
+import 'package:image_picker/image_picker.dart';
 
 class UploadBinScreen extends StatefulWidget {
   const UploadBinScreen({super.key});
@@ -10,11 +10,9 @@ class UploadBinScreen extends StatefulWidget {
 }
 
 class _UploadBinScreenState extends State<UploadBinScreen> {
-  // Variable to store the selected image
   File? _image;
   final ImagePicker _picker = ImagePicker();
 
-  // Function to open Camera
   Future<void> _pickImage(ImageSource source) async {
     final XFile? photo = await _picker.pickImage(source: source);
 
@@ -27,7 +25,6 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Brand Colors
     const Color brandGreen = Color(0xFF1B5E36);
     const Color lightGreyBtn = Color(0xFFF3F3F3);
 
@@ -64,14 +61,12 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
 
             const SizedBox(height: 30),
 
-            // 2. Photo Placeholder (Dynamic)
             Container(
               width: 250,
               height: 250,
               decoration: BoxDecoration(
                 color: const Color(0xFFE0E0E0),
                 borderRadius: BorderRadius.circular(20),
-                // If image exists, show it. Otherwise show grey box.
                 image: _image != null
                     ? DecorationImage(
                         image: FileImage(_image!),
@@ -87,49 +82,43 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
                         color: Colors.black87,
                       ),
                     )
-                  : null, // Hide icon if image is there
+                  : null,
             ),
 
             const SizedBox(height: 40),
 
-            // 3. Action Buttons
-
-            // "Take photo" Button (NOW WORKS!)
             _buildIconBtn(
               label: "Take photo",
               icon: Icons.camera_alt_outlined,
               bgColor: lightGreyBtn,
               textColor: Colors.black,
               onTap: () {
-                _pickImage(ImageSource.camera); // <--- Opens Camera
+                _pickImage(ImageSource.camera);
               },
             ),
 
             const SizedBox(height: 16),
 
-            // "Choose from gallery" Button (NOW WORKS!)
             _buildIconBtn(
               label: "Choose from gallery",
               icon: Icons.photo_library_outlined,
               bgColor: lightGreyBtn,
               textColor: Colors.black,
               onTap: () {
-                _pickImage(ImageSource.gallery); // <--- Opens Gallery
+                _pickImage(ImageSource.gallery);
               },
             ),
 
             const SizedBox(height: 16),
 
-            // "Use Photo" Button
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 onPressed: () {
                   if (_image != null) {
-                    // TODO: Send image to TensorFlow Lite here
                     print("Photo selected: ${_image!.path}");
-                    Navigator.pop(context); // Go back after selecting
+                    Navigator.pop(context);
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -158,7 +147,6 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
     );
   }
 
-  // Helper Widget for Buttons
   Widget _buildIconBtn({
     required String label,
     required IconData icon,

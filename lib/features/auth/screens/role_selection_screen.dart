@@ -13,9 +13,7 @@ class RoleSelectionScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
-        // Added Stack for background depth
         children: [
-          // Subtle top background circle to fill empty space
           Positioned(
             top: -100,
             right: -100,
@@ -31,7 +29,6 @@ class RoleSelectionScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Enhanced Logo Section
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -71,7 +68,6 @@ class RoleSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 50),
 
-                    // Role Buttons with descriptions to fill the "empty" feel
                     _buildRoleButton(
                       context: context,
                       icon: Icons.groups_3_rounded,
@@ -132,7 +128,6 @@ class RoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // Refined Button Widget
   Widget _buildRoleButton({
     required BuildContext context,
     required IconData icon,

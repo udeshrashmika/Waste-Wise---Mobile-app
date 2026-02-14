@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'scaned_result_screen.dart'; // <--- THIS WAS MISSING. I ADDED IT HERE.
+import 'scaned_result_screen.dart';
 
 class ResidentHomeScreen extends StatelessWidget {
   const ResidentHomeScreen({super.key});
@@ -10,10 +10,12 @@ class ResidentHomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
+
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false,
         title: const Text(
           'Waste Wise',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
@@ -25,22 +27,18 @@ class ResidentHomeScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 24),
 
-            // 1. AI Scan Button
             _buildAIScanButton(context, brandGreen),
 
             const SizedBox(height: 24),
 
-            // 2. Bin Status Card
             _buildBinStatusCard("Half-Full", Colors.orange),
 
             const SizedBox(height: 24),
 
-            // 3. Next Disposal Schedule
             _buildScheduleCard(),
 
             const SizedBox(height: 30),
 
-            // 4. Notifications Section
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -58,17 +56,15 @@ class ResidentHomeScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(brandGreen),
     );
   }
 
-  // UPDATED: Now navigates to ScannedResultScreen
   Widget _buildAIScanButton(BuildContext context, Color color) {
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => ScannedResultScreen()),
+          MaterialPageRoute(builder: (context) => const ScannedResultScreen()),
         );
       },
       child: Container(
@@ -209,22 +205,6 @@ class ResidentHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildBottomNav(Color color) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: color,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.notifications),
-          label: 'Alerts',
-        ),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-      ],
     );
   }
 }

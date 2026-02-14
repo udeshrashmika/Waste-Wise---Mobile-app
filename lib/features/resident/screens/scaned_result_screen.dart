@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'upload_bin_screen.dart'; // Make sure this import matches your file name
+import 'upload_bin_screen.dart';
 
 class ScannedResultScreen extends StatefulWidget {
   const ScannedResultScreen({super.key});
@@ -9,12 +9,10 @@ class ScannedResultScreen extends StatefulWidget {
 }
 
 class _ScannedResultScreenState extends State<ScannedResultScreen> {
-  // Variables to hold selected values
   String? selectedDisposalPoint = 'DTH-001';
   String? selectedWasteType = 'Plastic';
   final TextEditingController _commentController = TextEditingController();
 
-  // Branding color
   final Color brandGreen = const Color(0xFF1B5E36);
 
   @override
@@ -39,7 +37,6 @@ class _ScannedResultScreenState extends State<ScannedResultScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Disposal Point ID Dropdown
             _buildLabel("Disposal Point ID"),
             const SizedBox(height: 8),
             _buildDropdown(
@@ -50,7 +47,6 @@ class _ScannedResultScreenState extends State<ScannedResultScreen> {
 
             const SizedBox(height: 24),
 
-            // 2. Waste Type Dropdown
             _buildLabel("Waste type"),
             const SizedBox(height: 8),
             _buildDropdown(
@@ -61,13 +57,12 @@ class _ScannedResultScreenState extends State<ScannedResultScreen> {
 
             const SizedBox(height: 24),
 
-            // 3. Comments Section
             _buildLabel("Comments(optional)"),
             const SizedBox(height: 8),
             Container(
-              height: 150, // Taller box for comments
+              height: 150,
               decoration: BoxDecoration(
-                color: const Color(0xFFEEEEEE), // Light grey background
+                color: const Color(0xFFEEEEEE),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: TextField(
@@ -84,19 +79,14 @@ class _ScannedResultScreenState extends State<ScannedResultScreen> {
 
             const SizedBox(height: 40),
 
-            // 4. Upload Button
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 onPressed: () {
-                  // --- NAVIGATION CODE FIXED ---
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      // FIXED: Removed 'const' from here
-                      builder: (context) => UploadBinScreen(),
-                    ),
+                    MaterialPageRoute(builder: (context) => UploadBinScreen()),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -119,7 +109,6 @@ class _ScannedResultScreenState extends State<ScannedResultScreen> {
 
             const SizedBox(height: 16),
 
-            // 5. Helper Text
             const Center(
               child: Text(
                 'Upload a clear photo of your bin to detect fill level.',
@@ -133,7 +122,6 @@ class _ScannedResultScreenState extends State<ScannedResultScreen> {
     );
   }
 
-  // Helper widget for Labels
   Widget _buildLabel(String text) {
     return Text(
       text,
@@ -145,7 +133,6 @@ class _ScannedResultScreenState extends State<ScannedResultScreen> {
     );
   }
 
-  // Helper widget for Dropdowns
   Widget _buildDropdown({
     required String? value,
     required List<String> items,
