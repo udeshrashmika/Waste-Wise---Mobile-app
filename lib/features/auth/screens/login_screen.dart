@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:waste_wise/features/resident/screens/resident_main_layout.dart';
 import 'package:waste_wise/features/admin/screens/admin_main_layout.dart';
-import '../../truck_driver/screens/driver_home.dart';
+// 👇 1. පරණ Driver Home එක වෙනුවට Main Layout එක Import කරන්න
+import '../../truck_driver/screens/driver_main_layout.dart'; 
 import 'register_screen.dart';
 
 class UniversalLoginScreen extends StatelessWidget {
@@ -153,9 +154,10 @@ class UniversalLoginScreen extends StatelessWidget {
         MaterialPageRoute(builder: (context) => const AdminMainLayout()),
       );
     } else if (selectedRole == 'Truck Driver') {
+      // 👇 2. මෙතන තමයි ප්‍රධානම වෙනස: DriverHomeScreen වෙනුවට DriverMainLayout දාන්න
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
+        MaterialPageRoute(builder: (context) => const DriverMainLayout()),
       );
     } else if (selectedRole == 'Resident') {
       Navigator.pushReplacement(

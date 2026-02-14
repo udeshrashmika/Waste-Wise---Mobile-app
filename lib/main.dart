@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'features/truck_driver/screens/driver_main_layout.dart';
 import 'features/auth/screens/role_selection_screen.dart';
 
 void main() async {
