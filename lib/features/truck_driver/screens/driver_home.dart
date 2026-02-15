@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart'; 
+import 'package:latlong2/latlong.dart'; 
 
-class DriverHomeScreen extends StatelessWidget {
+class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
+
+  @override
+  State<DriverHomeScreen> createState() => _DriverHomeScreenState();
+}
+
+class _DriverHomeScreenState extends State<DriverHomeScreen> {
+  
+  final LatLng pickupLocation = const LatLng(6.9271, 79.8612);
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +30,7 @@ class DriverHomeScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 10),
            
+            
             Container(
               padding: const EdgeInsets.all(25),
               decoration: BoxDecoration(
@@ -40,36 +51,39 @@ class DriverHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 25),
 
-           
+            
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(25),
                 child: Container(
                   color: Colors.grey[200],
                   width: double.infinity,
-                  child: Stack(
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: pickupLocation, 
+                      initialZoom: 15.0, 
+                    ),
                     children: [
-                      
-                      Positioned.fill(
-                        child: Image.network(
-                          'https://tile.openstreetmap.org/13/5863/3864.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.map_outlined, size: 50, color: Colors.grey),
-                                  Text("Map Loading Failed", style: TextStyle(color: Colors.grey)),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
                      
-                      const Center(
-                        child: Icon(Icons.location_on, color: Colors.red, size: 50),
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.example.waste_wise',
+                      ),
+                      
+                      
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: pickupLocation,
+                            width: 80,
+                            height: 80,
+                            child: const Icon(
+                              Icons.location_on, 
+                              color: Colors.red, 
+                              size: 50,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -78,7 +92,7 @@ class DriverHomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 25),
 
-          
+           
             SizedBox(
               width: double.infinity,
               height: 55,
