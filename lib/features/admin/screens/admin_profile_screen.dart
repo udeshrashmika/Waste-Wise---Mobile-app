@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:waste_wise/features/auth/screens/role_selection_screen.dart';
+import 'manage_residents_screen.dart';
+import 'truck_fleet_status_screen.dart';
+import 'waste_analytics_screen.dart';
 
 class AdminProfileScreen extends StatelessWidget {
   const AdminProfileScreen({super.key});
@@ -67,17 +70,38 @@ class AdminProfileScreen extends StatelessWidget {
                 _buildAdminTile(
                   Icons.people_outline_rounded,
                   "Manage Residents",
-                  () {},
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ManageResidentsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildAdminTile(
                   Icons.local_shipping_outlined,
                   "Truck Fleet Status",
-                  () {},
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TruckFleetStatusScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildAdminTile(
                   Icons.analytics_outlined,
                   "Waste Analytics Report",
-                  () {},
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WasteAnalyticsScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -87,11 +111,6 @@ class AdminProfileScreen extends StatelessWidget {
             _buildAdminCard(
               title: "Account Security",
               children: [
-                _buildAdminTile(
-                  Icons.lock_reset_rounded,
-                  "Change Password",
-                  () {},
-                ),
                 _buildAdminTile(
                   Icons.logout_rounded,
                   "Logout System",
