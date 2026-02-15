@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
+
+  Color _getStatusColor(int levelCode) {
+    if (levelCode == 2) return Colors.red; // Full
+    if (levelCode == 1) return Colors.orange; // Half-Full
+    return const Color(0xFF1B5E36); // Empty
+  }
+
+  double _getDisplayLevel(int levelCode) {
+    if (levelCode == 2) return 1.0;
+    if (levelCode == 1) return 0.5;
+    return 0.1;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,10 +50,10 @@ class AdminDashboard extends StatelessWidget {
               mainAxisSpacing: 16,
               childAspectRatio: 1.5,
               children: [
-                _buildStatCard("Total Points", "12", brandGreen),
+                _buildStatCard("Total Points", "10", brandGreen),
                 _buildStatCard("Full Bins", "05", Colors.red),
                 _buildStatCard("Half-Full", "04", Colors.orange),
-                _buildStatCard("Active Drivers", "03", Colors.blue),
+                _buildStatCard("Active Drivers", "01", Colors.blue),
               ],
             ),
 
@@ -51,11 +64,35 @@ class AdminDashboard extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildLocationTile("Block A - Main Bin", 0.95, Colors.red),
-            _buildLocationTile("Block B - South Wing", 0.45, Colors.orange),
-            _buildLocationTile("Block C - Parking Area", 0.85, Colors.red),
-            _buildLocationTile("Basement Chute 01", 0.15, brandGreen),
-            _buildLocationTile("Basement Chute 02", 0.60, Colors.orange),
+
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('bins')
+                  .orderBy('blockID')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Text('Something went wrong');
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                return Column(
+                  children: snapshot.data!.docs.map((doc) {
+                    Map<String, dynamic> data =
+                        doc.data() as Map<String, dynamic>;
+                    int levelCode = data['levelCode'] ?? 0;
+
+                    return _buildLocationTile(
+                      data['locationName'] ?? 'Unknown',
+                      _getDisplayLevel(levelCode),
+                      _getStatusColor(levelCode),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -129,7 +166,6 @@ class AdminDashboard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-
           ClipRRect(
             borderRadius: BorderRadius.circular(5),
             child: LinearProgressIndicator(

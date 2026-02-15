@@ -1,13 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:waste_wise/features/resident/screens/resident_main_layout.dart';
 import 'package:waste_wise/features/admin/screens/admin_main_layout.dart';
-import '../../truck_driver/screens/driver_main_layout.dart'; 
+import '../../truck_driver/screens/driver_main_layout.dart';
 import 'register_screen.dart';
+import '../../../services/auth_service.dart';
 
-class UniversalLoginScreen extends StatelessWidget {
+class UniversalLoginScreen extends StatefulWidget {
   final String userRole;
 
   const UniversalLoginScreen({super.key, required this.userRole});
+
+  @override
+  State<UniversalLoginScreen> createState() => _UniversalLoginScreenState();
+}
+
+class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin(BuildContext context) async {
+    final String email = _emailController.text.trim();
+    final String password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    String? firebaseRole = await _authService.loginAndGetRole(email, password);
+
+    setState(() => _isLoading = false);
+
+    if (firebaseRole == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Login failed. Please check your credentials."),
+        ),
+      );
+      return;
+    }
+
+    if (firebaseRole.trim().toLowerCase() ==
+        widget.userRole.trim().toLowerCase()) {
+      if (firebaseRole == 'Admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminMainLayout()),
+        );
+      } else if (firebaseRole == 'Truck Driver') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DriverMainLayout()),
+        );
+      } else if (firebaseRole == 'Resident') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ResidentMainLayout()),
+        );
+      }
+    } else {
+      await FirebaseAuth.instance.signOut();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Access Denied: You are registered as $firebaseRole"),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +114,7 @@ class UniversalLoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Login as $userRole',
+                  'Login as ${widget.userRole}',
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -60,11 +133,13 @@ class UniversalLoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 40),
                 _buildInputField(
+                  controller: _emailController,
                   icon: Icons.email_outlined,
-                  hint: 'Email or Phone',
+                  hint: 'Email',
                 ),
                 const SizedBox(height: 20),
                 _buildInputField(
+                  controller: _passwordController,
                   icon: Icons.lock_outline,
                   hint: 'Password',
                   isPassword: true,
@@ -91,19 +166,28 @@ class UniversalLoginScreen extends StatelessWidget {
                       ),
                       elevation: 4,
                     ),
-                    onPressed: () => _handleLogin(context),
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    onPressed: _isLoading ? null : () => _handleLogin(context),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Login',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 25),
-                if (userRole == 'Resident')
+                if (widget.userRole == 'Resident')
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -128,7 +212,7 @@ class UniversalLoginScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Text(
-                      "Contact Admin for $userRole account access",
+                      "Contact Admin for ${widget.userRole} account access",
                       style: const TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
@@ -144,34 +228,14 @@ class UniversalLoginScreen extends StatelessWidget {
     );
   }
 
-  void _handleLogin(BuildContext context) {
-    final String selectedRole = userRole.trim();
-
-    if (selectedRole == 'Admin') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AdminMainLayout()),
-      );
-    } else if (selectedRole == 'Truck Driver') {
-      
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const DriverMainLayout()),
-      );
-    } else if (selectedRole == 'Resident') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const ResidentMainLayout()),
-      );
-    }
-  }
-
   Widget _buildInputField({
+    required TextEditingController controller,
     required IconData icon,
     required String hint,
     bool isPassword = false,
   }) {
     return TextField(
+      controller: controller,
       obscureText: isPassword,
       decoration: InputDecoration(
         filled: true,
