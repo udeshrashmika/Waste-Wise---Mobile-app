@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/add_schedule_dialog.dart';
 
 class AdminScheduleScreen extends StatelessWidget {
   const AdminScheduleScreen({super.key});
@@ -18,60 +20,64 @@ class AdminScheduleScreen extends StatelessWidget {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildSectionHeader("Today's Tasks"),
-          const SizedBox(height: 12),
-          _buildScheduleCard(
-            date: "Feb 14, 2026",
-            time: "09:00 AM",
-            driver: "Asanka Perera",
-            blocks: "Block A & B",
-            status: "In Progress",
-            statusColor: Colors.blue,
-          ),
-          const SizedBox(height: 25),
-          _buildSectionHeader("Upcoming Pickups"),
-          const SizedBox(height: 12),
-          _buildScheduleCard(
-            date: "Feb 16, 2026",
-            time: "07:30 AM",
-            driver: "Saman Kumara",
-            blocks: "Block C, D & E",
-            status: "Scheduled",
-            statusColor: Colors.orange,
-          ),
-          _buildScheduleCard(
-            date: "Feb 18, 2026",
-            time: "07:30 AM",
-            driver: "Not Assigned",
-            blocks: "Basement Chutes",
-            status: "Pending",
-            statusColor: Colors.red,
-          ),
-        ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('schedules')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text("No schedules found. Click + to add."),
+            );
+          }
+
+          final tasks = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: tasks.length,
+            itemBuilder: (context, index) {
+              var data = tasks[index].data() as Map<String, dynamic>;
+
+              Color statusColor;
+              switch (data['status']) {
+                case 'In Progress':
+                  statusColor = Colors.blue;
+                  break;
+                case 'Scheduled':
+                  statusColor = Colors.orange;
+                  break;
+                default:
+                  statusColor = Colors.red;
+              }
+
+              return _buildScheduleCard(
+                date: data['date'] ?? 'No Date',
+                time: data['time'] ?? 'No Time',
+                driver: data['driverName'] ?? 'Not Assigned',
+                blocks: data['route'] ?? 'No Route',
+                status: data['status'] ?? 'Pending',
+                statusColor: statusColor,
+              );
+            },
+          );
+        },
       ),
 
       floatingActionButton: FloatingActionButton(
         backgroundColor: brandGreen,
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Scheduling feature coming soon!")),
+          showDialog(
+            context: context,
+            builder: (context) => const AddScheduleDialog(),
           );
         },
         child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: Colors.black54,
       ),
     );
   }
@@ -157,5 +163,34 @@ class AdminScheduleScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class AdminScheduleService {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  Stream<QuerySnapshot> getAvailableDrivers() {
+    return _db
+        .collection('users')
+        .where('role', isEqualTo: 'Truck Driver')
+        .snapshots();
+  }
+
+  Future<void> addSchedule({
+    required String driverId,
+    required String driverName,
+    required String route,
+    required String date,
+    required String time,
+  }) async {
+    await _db.collection('schedules').add({
+      'driverId': driverId,
+      'driverName': driverName,
+      'route': route,
+      'date': date,
+      'time': time,
+      'status': 'Scheduled',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 }
