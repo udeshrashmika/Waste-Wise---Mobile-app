@@ -38,4 +38,39 @@ class AuthService {
     }
     return null;
   }
+
+  Future<String?> registerResident({
+    required String email,
+    required String password,
+    required String fullName,
+    required String phoneNumber,
+    required String apartmentId,
+  }) async {
+    try {
+      UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      User? user = result.user;
+
+      if (user != null) {
+        await _db.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'name': fullName,
+          'email': email,
+          'phone': phoneNumber,
+          'apartmentId': apartmentId,
+          'role': 'Resident',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        return "success";
+      }
+    } on FirebaseAuthException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    }
+    return null;
+  }
 }
