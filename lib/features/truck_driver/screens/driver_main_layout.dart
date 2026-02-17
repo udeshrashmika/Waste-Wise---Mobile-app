@@ -6,17 +6,19 @@ import 'driver_schedule.dart';
 import 'driver_profile.dart';
 
 class DriverMainLayout extends StatefulWidget {
-  const DriverMainLayout({super.key});
+ 
+  final int initialIndex;
+  const DriverMainLayout({super.key, this.initialIndex = 0});
 
   @override
   State<DriverMainLayout> createState() => _DriverMainLayoutState();
 }
 
 class _DriverMainLayoutState extends State<DriverMainLayout> {
-  int _selectedIndex = 0;
+  late int _selectedIndex; 
   final Color brandGreen = const Color(0xFF1B5E36);
 
-   final List<Widget> _screens = [
+  final List<Widget> _screens = [
     const DriverHomeScreen(),
     const DriverStopsScreen(),
     const DriverScanScreen(),
@@ -25,17 +27,27 @@ class _DriverMainLayoutState extends State<DriverMainLayout> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    
+    _selectedIndex = widget.initialIndex;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
-      
+     
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1), 
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 10,
               spreadRadius: 2,
             ),
@@ -43,17 +55,17 @@ class _DriverMainLayoutState extends State<DriverMainLayout> {
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
-          onTap: (index) => setState(() => _selectedIndex = index),
-          type: BottomNavigationBarType.fixed, 
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
-          
-          selectedItemColor: brandGreen, 
-          unselectedItemColor: Colors.grey, 
-          
-          
+          selectedItemColor: brandGreen,
+          unselectedItemColor: Colors.grey,
           selectedIconTheme: const IconThemeData(size: 32),
           unselectedIconTheme: const IconThemeData(size: 24),
-          
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 12,
@@ -62,14 +74,11 @@ class _DriverMainLayoutState extends State<DriverMainLayout> {
             fontSize: 11,
             fontWeight: FontWeight.w500,
           ),
-          
-          
-          showUnselectedLabels: true, 
-
+          showUnselectedLabels: true,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),       
-              activeIcon: Icon(Icons.home_filled),   
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_filled),
               label: 'Home',
             ),
             BottomNavigationBarItem(
@@ -79,7 +88,7 @@ class _DriverMainLayoutState extends State<DriverMainLayout> {
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.qr_code_scanner),
-              activeIcon: Icon(Icons.qr_code_2), 
+              activeIcon: Icon(Icons.qr_code_2),
               label: 'Scan',
             ),
             BottomNavigationBarItem(

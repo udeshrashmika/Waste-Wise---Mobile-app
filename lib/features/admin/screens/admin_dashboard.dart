@@ -4,16 +4,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 
-  Color _getStatusColor(int levelCode) {
-    if (levelCode == 2) return Colors.red; // Full
-    if (levelCode == 1) return Colors.orange; // Half-Full
-    return const Color(0xFF1B5E36); // Empty
+ 
+  Color _getStatusColor(String status) {
+    if (status == 'Full') return Colors.red;
+    if (status == 'Half-Full') return Colors.orange;
+    return const Color(0xFF1B5E36); 
   }
 
-  double _getDisplayLevel(int levelCode) {
-    if (levelCode == 2) return 1.0;
-    if (levelCode == 1) return 0.5;
-    return 0.1;
+  
+  double _getDisplayLevel(String status) {
+    if (status == 'Full') return 1.0; 
+    if (status == 'Half-Full') return 0.5; 
+    return 0.05; 
   }
 
   @override
@@ -31,70 +33,85 @@ class AdminDashboard extends StatelessWidget {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "System Pulse",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
+      
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('bins').snapshots(),
+        builder: (context, snapshot) {
+          
+          if (snapshot.hasError) {
+            return const Center(child: Text('Something went wrong! ⚠️'));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
+          
+          final docs = snapshot.data!.docs;
+          
+          int totalPoints = docs.length;
+          
+          int fullBins = docs.where((doc) => doc['status'] == 'Full').length;
+          
+          int halfFullBins = docs.where((doc) => doc['status'] == 'Half-Full').length;
+          
+          int activeDrivers = 1; 
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildStatCard("Total Points", "10", brandGreen),
-                _buildStatCard("Full Bins", "05", Colors.red),
-                _buildStatCard("Half-Full", "04", Colors.orange),
-                _buildStatCard("Active Drivers", "01", Colors.blue),
-              ],
-            ),
+                const Text(
+                  "System Pulse",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
 
-            const SizedBox(height: 30),
+               
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _buildStatCard("Total Points", "$totalPoints", brandGreen),
+                    _buildStatCard("Full Bins", "$fullBins", Colors.red),
+                    _buildStatCard("Half-Full", "$halfFullBins", Colors.orange),
+                    _buildStatCard("Active Drivers", "$activeDrivers", Colors.blue),
+                  ],
+                ),
 
-            const Text(
-              "Garbage Point Locations",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 30),
 
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('bins')
-                  .orderBy('blockID')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Text('Something went wrong');
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                const Text(
+                  "Garbage Point Locations",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
 
-                return Column(
-                  children: snapshot.data!.docs.map((doc) {
-                    Map<String, dynamic> data =
-                        doc.data() as Map<String, dynamic>;
-                    int levelCode = data['levelCode'] ?? 0;
+                
+                Column(
+                  children: docs.map((doc) {
+                    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+                    
+                    
+                    String locationName = data['location'] ?? 'Unknown Location'; 
+                    String status = data['status'] ?? 'Empty';
 
                     return _buildLocationTile(
-                      data['locationName'] ?? 'Unknown',
-                      _getDisplayLevel(levelCode),
-                      _getStatusColor(levelCode),
+                      locationName,
+                      _getDisplayLevel(status),
+                      _getStatusColor(status),
+                      status,
                     );
                   }).toList(),
-                );
-              },
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -107,7 +124,7 @@ class AdminDashboard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         border: Border(left: BorderSide(color: color, width: 4)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -129,7 +146,7 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildLocationTile(String location, double level, Color color) {
+  Widget _buildLocationTile(String location, double level, Color color, String statusText) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -138,7 +155,7 @@ class AdminDashboard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -155,12 +172,12 @@ class AdminDashboard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     location,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ],
               ),
               Text(
-                "${(level * 100).toInt()}%",
+                statusText,
                 style: TextStyle(color: color, fontWeight: FontWeight.bold),
               ),
             ],
@@ -172,7 +189,7 @@ class AdminDashboard extends StatelessWidget {
               value: level,
               backgroundColor: Colors.grey.shade200,
               color: color,
-              minHeight: 10,
+              minHeight: 8,
             ),
           ),
         ],

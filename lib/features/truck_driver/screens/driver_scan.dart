@@ -46,7 +46,7 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
             ),
             const SizedBox(height: 20),
 
-           
+          
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
@@ -55,31 +55,32 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
                   children: [
                     MobileScanner(
                       controller: controller,
-                      onDetect: (capture) {
-                        if (!isScanned) {
-                          final List<Barcode> barcodes = capture.barcodes;
-                          for (final barcode in barcodes) {
-                            
-                            setState(() {
-                              isScanned = true; 
-                            });
+   onDetect: (capture) {
+  if (!isScanned) {
+    final List<Barcode> barcodes = capture.barcodes;
+    for (final barcode in barcodes) {
+      setState(() {
+        isScanned = true;
+      });
 
-                            
-                           String rawQr = barcode.rawValue ?? "Unknown_Bin";
+     
+
       
-                           String binId = rawQr.replaceAll(RegExp(r'[^\w\s]+'), '_'); 
+      String rawQr = barcode.rawValue ?? "Unknown_Bin";
+      
+      String binId = rawQr.replaceAll(RegExp(r'[^\w\s]+'), '_'); 
 
-                           ScaffoldMessenger.of(context).showSnackBar(
-                           const SnackBar(content: Text("Processing... Please wait ⏳")),
-                            );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Processing... Please wait ⏳")),
+      );
                             
                             FirebaseFirestore.instance.collection('bins').doc(binId).set({
                               'bin_id': binId,
                               'status': 'Empty', 
-                              'last_collected': FieldValue.serverTimestamp(), 
-                              'collected_by': 'Driver Asanka',
+                              'last_collected': FieldValue.serverTimestamp(),
+                              'collected_by': 'Driver Asanka', 
                               'location': 'Block A', 
-                              'fill_level': 0, 
+                              'fill_level': 0,
                             }, SetOptions(merge: true)).then((_) {
                               
                               
@@ -90,7 +91,7 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
                                 ),
                               );
                               
-                             
+                              
                               Future.delayed(const Duration(seconds: 2), () {
                                 setState(() {
                                   isScanned = false;
@@ -98,7 +99,7 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
                               });
 
                             }).catchError((error) {
-                              
+                             
                               setState(() {
                                 isScanned = false;
                               });
@@ -114,7 +115,7 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
                       },
                     ),
 
-                    
+                   
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.white, width: 2),
