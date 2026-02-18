@@ -37,20 +37,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final apartment = _apartmentController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (name.isEmpty ||
-        email.isEmpty ||
-        phone.isEmpty ||
-        apartment.isEmpty ||
-        password.isEmpty) {
+    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill in all fields")),
+        const SnackBar(content: Text("Please fill in all required fields")),
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    String? result = await _authService.registerResident(
+    String? result = await _authService.registerUser(
       email: email,
       password: password,
       fullName: name,
@@ -129,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _buildRegisterField(
                 controller: _apartmentController,
                 icon: Icons.apartment_outlined,
-                hint: 'Apartment ID',
+                hint: 'Apartment ID (Residents Only)',
               ),
               const SizedBox(height: 15),
               _buildRegisterField(

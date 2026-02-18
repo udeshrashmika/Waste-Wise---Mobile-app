@@ -1,75 +1,68 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/services/admin_management_service.dart';
+import '../widgets/add_driver_dialog.dart';
 
 class TruckFleetStatusScreen extends StatelessWidget {
-  const TruckFleetStatusScreen({super.key});
+  final AdminManagementService _service = AdminManagementService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
           "Truck Fleet Status",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
+        centerTitle: true,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildTruckTile(
-            "Truck #01",
-            "Asanka Perera",
-            "On Route",
-            Colors.blue,
-          ),
-          _buildTruckTile(
-            "Truck #02",
-            "Saman Kumara",
-            "Standby",
-            Colors.orange,
-          ),
-          _buildTruckTile(
-            "Truck #03",
-            "Dilshan Silva",
-            "Maintenance",
-            Colors.red,
-          ),
-        ],
-      ),
-    );
-  }
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _service.getDrivers(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
 
-  Widget _buildTruckTile(
-    String truck,
-    String driver,
-    String status,
-    Color color,
-  ) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: Icon(Icons.local_shipping, color: color, size: 30),
-        title: Text(truck, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text("Driver: $driver"),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            status,
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          var drivers = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: drivers.length,
+            itemBuilder: (context, index) {
+              var data = drivers[index].data() as Map<String, dynamic>;
+              return Card(
+                margin: const EdgeInsets.only(bottom: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFF1B5E36),
+                    child: Icon(Icons.local_shipping, color: Colors.white),
+                  ),
+                  title: Text(
+                    data['name'] ?? 'Unknown Driver',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text("Vehicle: ${data['vehicleNumber'] ?? 'N/A'}"),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () => _service.removeUser(drivers[index].id),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF1B5E36),
+        onPressed: () => showDialog(
+          context: context,
+          builder: (c) => const AddDriverDialog(),
         ),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

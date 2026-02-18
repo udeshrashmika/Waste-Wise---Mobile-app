@@ -40,16 +40,13 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
     }
 
     setState(() => _isLoading = true);
-
     String? firebaseRole = await _authService.loginAndGetRole(email, password);
 
     setState(() => _isLoading = false);
 
     if (firebaseRole == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Login failed. Please check your credentials."),
-        ),
+        const SnackBar(content: Text("Login failed. Check your credentials.")),
       );
       return;
     }
@@ -125,11 +122,7 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
                 const Text(
                   'Waste Management For Cleaner Sri Lanka',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 const SizedBox(height: 40),
                 _buildInputField(
@@ -180,14 +173,15 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
                             'Login',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                   ),
                 ),
                 const SizedBox(height: 25),
-                if (widget.userRole == 'Resident')
+
+                if (widget.userRole == 'Resident' ||
+                    widget.userRole == 'Truck Driver')
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -201,19 +195,24 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
                             ),
                           );
                         },
-                        child: const Text(
-                          'Create account',
-                          style: TextStyle(color: Colors.lightBlue),
+                        child: Text(
+                          widget.userRole == 'Truck Driver'
+                              ? 'Accept Invite'
+                              : 'Create account',
+                          style: const TextStyle(
+                            color: Colors.lightBlue,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
                   )
                 else
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10),
                     child: Text(
-                      "Contact Admin for ${widget.userRole} account access",
-                      style: const TextStyle(
+                      "Contact System Admin for access",
+                      style: TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
                         fontStyle: FontStyle.italic,

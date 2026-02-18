@@ -74,7 +74,7 @@ class AdminProfileScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const ManageResidentsScreen(),
+                        builder: (context) => ManageResidentsScreen(),
                       ),
                     );
                   },
@@ -86,7 +86,7 @@ class AdminProfileScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const TruckFleetStatusScreen(),
+                        builder: (context) => TruckFleetStatusScreen(),
                       ),
                     );
                   },
@@ -98,7 +98,7 @@ class AdminProfileScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const WasteAnalyticsScreen(),
+                        builder: (context) => WasteAnalyticsScreen(),
                       ),
                     );
                   },

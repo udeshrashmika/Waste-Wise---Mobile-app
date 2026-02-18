@@ -15,38 +15,43 @@ class AuthService {
       User? user = result.user;
 
       if (user != null) {
-        print("✅ Auth Success! User UID: ${user.uid}");
-
-        DocumentSnapshot doc = await _db
+        DocumentSnapshot uidDoc = await _db
             .collection('users')
             .doc(user.uid)
             .get();
 
-        if (doc.exists) {
-          String? role = doc.get('role') as String?;
-          print("✅ Firestore Found Role: $role");
-          return role;
-        } else {
-          print("❌ Firestore Error: No document found for UID: ${user.uid}");
+        if (uidDoc.exists) {
+          return uidDoc.get('role') as String?;
+        }
+
+        DocumentSnapshot emailDoc = await _db
+            .collection('users')
+            .doc(email)
+            .get();
+
+        if (emailDoc.exists) {
+          return emailDoc.get('role') as String?;
         }
       }
-    } on FirebaseAuthException catch (e) {
-      print("❌ Auth Error Code: ${e.code}");
-      print("❌ Auth Error Message: ${e.message}");
     } catch (e) {
-      print("❌ General Login Error: $e");
+      print("❌ Login Error: $e");
     }
     return null;
   }
 
-  Future<String?> registerResident({
+  Future<String?> registerUser({
     required String email,
     required String password,
     required String fullName,
     required String phoneNumber,
-    required String apartmentId,
+    String? apartmentId,
   }) async {
     try {
+      DocumentSnapshot invitedDoc = await _db
+          .collection('users')
+          .doc(email)
+          .get();
+
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -55,15 +60,24 @@ class AuthService {
       User? user = result.user;
 
       if (user != null) {
-        await _db.collection('users').doc(user.uid).set({
-          'uid': user.uid,
-          'name': fullName,
-          'email': email,
-          'phone': phoneNumber,
-          'apartmentId': apartmentId,
-          'role': 'Resident',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+        if (invitedDoc.exists) {
+          await _db.collection('users').doc(email).update({
+            'uid': user.uid,
+            'phone': phoneNumber,
+            'isRegistered': true,
+            'status': 'Active',
+          });
+        } else {
+          await _db.collection('users').doc(user.uid).set({
+            'uid': user.uid,
+            'name': fullName,
+            'email': email,
+            'phone': phoneNumber,
+            'apartmentId': apartmentId,
+            'role': 'Resident',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
         return "success";
       }
     } on FirebaseAuthException catch (e) {
