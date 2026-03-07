@@ -13,6 +13,10 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
+    aaptOptions {
+        noCompress("tflite", "lite") 
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -44,4 +48,16 @@ android {
 
 flutter {
     source = "../.."
+}
+
+subprojects {
+    afterEvaluate {
+        val project = this
+        if (project.hasProperty("android")) {
+            val android = project.extensions.getByName("android") as com.android.build.gradle.BaseExtension
+            if (android.namespace == null) {
+                android.namespace = project.group.toString()
+            }
+        }
+    }
 }

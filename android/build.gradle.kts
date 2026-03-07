@@ -22,3 +22,20 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+subprojects {
+    val setupNamespace = { project: Project ->
+        if (project.hasProperty("android")) {
+            val android = project.extensions.getByName("android") as com.android.build.gradle.BaseExtension
+            if (android.namespace == null) {
+                android.namespace = project.group.toString()
+            }
+        }
+    }
+
+    if (state.executed) {
+        setupNamespace(this)
+    } else {
+        afterEvaluate { setupNamespace(this) }
+    }
+}

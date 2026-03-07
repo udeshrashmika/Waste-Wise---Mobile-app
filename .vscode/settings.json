@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/hi/Waste-wise---Mobile-app/linux"
+    "cmake.sourceDirectory": "C:/hi/Waste-wise---Mobile-app/linux",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
