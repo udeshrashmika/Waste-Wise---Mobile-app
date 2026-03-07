@@ -12,7 +12,7 @@ class ClassifierService {
     var recognitions = await Tflite.runModelOnImage(
       path: imagePath,
       numResults: 1,
-      threshold: 0.5,
+      threshold: 0.1,
       imageMean: 127.5,
       imageStd: 127.5,
     );
