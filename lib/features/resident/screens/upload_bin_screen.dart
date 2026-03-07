@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // අලුතින් එකතු කළා
 import '../../../services/classifier_service.dart';
 import '../../../services/auth_service.dart';
 
@@ -43,7 +44,21 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
 
       if (result != null) {
         final String uid = FirebaseAuth.instance.currentUser!.uid;
+
+        // 1. Home Page එක update කරනවා (AuthService එකෙන්)
         await _authService.updateBinStatus(uid: uid, status: result);
+
+        // 2. අලුතින් එකතු කළ කොටස: History එක List එකක් විදිහට සේව් කරනවා
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('disposal_history')
+            .add({
+              'status': result,
+              'timestamp': FieldValue.serverTimestamp(),
+              'isCollected':
+                  result == "Empty", // Empty නම් Collected කියලා වැටෙනවා
+            });
 
         if (!mounted) return;
         _showResultDialog(result);

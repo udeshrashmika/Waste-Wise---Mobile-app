@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ignore: unused_local_variable
-    const Color brandGreen = Color(0xFF1B5E36);
+    final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -19,15 +20,92 @@ class HistoryScreen extends StatelessWidget {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: 5,
-        itemBuilder: (context, index) {
-          // Dummy data for the UI phase
-          return _buildHistoryCard(
-            date: "Feb ${14 - index}, 2026",
-            status: index % 2 == 0 ? "Full" : "Half-Full",
-            isCollected: true,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('disposal_history')
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(child: Text("Error loading history"));
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("තාම History එකක් නැහැ."));
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              // Document එක සහ ඒකේ ID එක වෙන වෙනම ගන්නවා
+              var doc = snapshot.data!.docs[index];
+              var data = doc.data() as Map<String, dynamic>;
+              String docId = doc.id; // මේක තමයි Delete කරන්න ඕන ID එක
+
+              String formattedDate = "Just Now";
+              if (data['timestamp'] != null) {
+                DateTime date = (data['timestamp'] as Timestamp).toDate();
+                formattedDate = "${date.day}/${date.month}/${date.year}";
+              }
+
+              String status = data['status'] ?? "Unknown";
+              bool isCollected = data['isCollected'] ?? false;
+
+              // Swipe to Delete පහසුකම සඳහා Dismissible භාවිතා කිරීම
+              return Dismissible(
+                key: Key(docId), // හැම item එකකටම unique key එකක් ඕන
+                direction:
+                    DismissDirection.endToStart, // දකුණේ ඉඳන් වමට Swipe කරන්න
+                // Swipe කරද්දි පේන රතු පාට Background එක
+                background: Container(
+                  margin: const EdgeInsets.only(bottom: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  alignment: Alignment.centerRight,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade400,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+
+                // Swipe කරලා ඉවර වුණාම වෙන දේ
+                onDismissed: (direction) async {
+                  // Firestore එකෙන් අදාළ record එක Delete කරනවා
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid)
+                      .collection('disposal_history')
+                      .doc(docId)
+                      .delete();
+
+                  // User ට Delete වුණා කියලා පොඩි පණිවිඩයක් පෙන්වනවා
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Record deleted successfully"),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                child: _buildHistoryCard(
+                  date: formattedDate,
+                  status: status,
+                  isCollected: isCollected,
+                ),
+              );
+            },
           );
         },
       ),
@@ -57,8 +135,8 @@ class HistoryScreen extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F5E9),
               shape: BoxShape.circle,
             ),
             child: const Icon(
