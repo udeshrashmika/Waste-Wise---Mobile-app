@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'scaned_result_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'upload_bin_screen.dart';
 
 class ResidentHomeScreen extends StatelessWidget {
   const ResidentHomeScreen({super.key});
@@ -7,10 +9,10 @@ class ResidentHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color brandGreen = Color(0xFF1B5E36);
+    final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -31,7 +33,33 @@ class ResidentHomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            _buildBinStatusCard("Half-Full", Colors.orange),
+            StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return _buildBinStatusCard("Loading...", Colors.grey);
+                }
+
+                String status = "Empty";
+                Color statusColor = brandGreen;
+
+                if (snapshot.hasData && snapshot.data!.exists) {
+                  var userData = snapshot.data!.data() as Map<String, dynamic>;
+                  status = userData['currentBinLevel'] ?? "Empty";
+
+                  if (status == "Full") {
+                    statusColor = Colors.red;
+                  } else if (status == "Half Full") {
+                    statusColor = Colors.orange;
+                  }
+                }
+
+                return _buildBinStatusCard(status, statusColor);
+              },
+            ),
 
             const SizedBox(height: 24),
 
@@ -64,7 +92,7 @@ class ResidentHomeScreen extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ScannedResultScreen()),
+          MaterialPageRoute(builder: (context) => const UploadBinScreen()),
         );
       },
       child: Container(

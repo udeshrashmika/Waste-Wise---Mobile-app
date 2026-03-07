@@ -8,7 +8,7 @@ class ClassifierService {
     );
   }
 
-  static Future<Map<String, dynamic>?> predict(String imagePath) async {
+  static Future<String?> predictLevel(String imagePath) async {
     var recognitions = await Tflite.runModelOnImage(
       path: imagePath,
       numResults: 1,
@@ -18,15 +18,8 @@ class ClassifierService {
     );
 
     if (recognitions != null && recognitions.isNotEmpty) {
-      return {
-        "label": recognitions[0]["label"],
-        "confidence": recognitions[0]["confidence"],
-      };
+      return recognitions[0]['label'];
     }
     return null;
-  }
-
-  static void dispose() {
-    Tflite.close();
   }
 }

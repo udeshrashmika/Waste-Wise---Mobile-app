@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../services/classifier_service.dart';
+import '../../../services/auth_service.dart';
 
 class UploadBinScreen extends StatefulWidget {
   const UploadBinScreen({super.key});
@@ -12,6 +15,8 @@ class UploadBinScreen extends StatefulWidget {
 class _UploadBinScreenState extends State<UploadBinScreen> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
+  bool _isAnalyzing = false;
+  final AuthService _authService = AuthService();
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? photo = await _picker.pickImage(source: source);
@@ -21,6 +26,58 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
         _image = File(photo.path);
       });
     }
+  }
+
+  Future<void> _handleUsePhoto() async {
+    if (_image == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please take a photo first!")),
+      );
+      return;
+    }
+
+    setState(() => _isAnalyzing = true);
+
+    try {
+      final String? result = await ClassifierService.predictLevel(_image!.path);
+
+      if (result != null) {
+        final String uid = FirebaseAuth.instance.currentUser!.uid;
+        await _authService.updateBinStatus(uid: uid, status: result);
+
+        if (!mounted) return;
+        _showResultDialog(result);
+      } else {
+        throw Exception("Analysis failed to detect a level.");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+    } finally {
+      if (mounted) setState(() => _isAnalyzing = false);
+    }
+  }
+
+  void _showResultDialog(String level) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Analysis Complete"),
+        content: Text("Your bin is detected as: $level"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -47,18 +104,15 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
         child: Column(
           children: [
             const SizedBox(height: 10),
-
             const Text(
               "Capture a clear photo\nof your Bin",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
                 height: 1.2,
               ),
             ),
-
             const SizedBox(height: 30),
 
             Container(
@@ -76,11 +130,7 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
               ),
               child: _image == null
                   ? const Center(
-                      child: Icon(
-                        Icons.camera_alt_outlined,
-                        size: 80,
-                        color: Colors.black87,
-                      ),
+                      child: Icon(Icons.camera_alt_outlined, size: 80),
                     )
                   : null,
             ),
@@ -92,9 +142,7 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
               icon: Icons.camera_alt_outlined,
               bgColor: lightGreyBtn,
               textColor: Colors.black,
-              onTap: () {
-                _pickImage(ImageSource.camera);
-              },
+              onTap: () => _pickImage(ImageSource.camera),
             ),
 
             const SizedBox(height: 16),
@@ -104,9 +152,7 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
               icon: Icons.photo_library_outlined,
               bgColor: lightGreyBtn,
               textColor: Colors.black,
-              onTap: () {
-                _pickImage(ImageSource.gallery);
-              },
+              onTap: () => _pickImage(ImageSource.gallery),
             ),
 
             const SizedBox(height: 16),
@@ -115,31 +161,21 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  if (_image != null) {
-                    print("Photo selected: ${_image!.path}");
-                    Navigator.pop(context);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Please take a photo first!"),
-                      ),
-                    );
-                  }
-                },
+                onPressed: _isAnalyzing ? null : _handleUsePhoto,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: brandGreen,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  "Use Photo",
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
+                child: _isAnalyzing
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "Use Photo",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
               ),
             ),
-
             const SizedBox(height: 30),
           ],
         ),
@@ -171,7 +207,6 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: bgColor,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

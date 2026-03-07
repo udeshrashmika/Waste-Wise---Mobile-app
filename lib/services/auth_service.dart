@@ -5,6 +5,22 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  Future<void> updateBinStatus({
+    required String uid,
+    required String status,
+  }) async {
+    try {
+      await _db.collection('users').doc(uid).update({
+        'currentBinLevel': status,
+        'lastAnalyzeTimestamp': FieldValue.serverTimestamp(),
+      });
+      print("✅ Firestore updated: Bin is $status");
+    } catch (e) {
+      print("❌ Firestore Update Error: $e");
+      rethrow;
+    }
+  }
+
   Future<String?> loginAndGetRole(String email, String password) async {
     try {
       UserCredential result = await _auth.signInWithEmailAndPassword(
@@ -66,6 +82,7 @@ class AuthService {
             'phone': phoneNumber,
             'isRegistered': true,
             'status': 'Active',
+            'currentBinLevel': 'Empty',
           });
         } else {
           await _db.collection('users').doc(user.uid).set({
@@ -75,6 +92,7 @@ class AuthService {
             'phone': phoneNumber,
             'apartmentId': apartmentId,
             'role': 'Resident',
+            'currentBinLevel': 'Empty',
             'createdAt': FieldValue.serverTimestamp(),
           });
         }
