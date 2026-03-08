@@ -33,6 +33,7 @@ class ResidentHomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
+            
             StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('users')
@@ -63,6 +64,7 @@ class ResidentHomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
+            
             _buildScheduleCard(),
 
             const SizedBox(height: 30),
@@ -166,7 +168,53 @@ class ResidentHomeScreen extends StatelessWidget {
     );
   }
 
+
   Widget _buildScheduleCard() {
+    return StreamBuilder<QuerySnapshot>(
+      
+      stream: FirebaseFirestore.instance.collection('schedules').snapshots(),
+      builder: (context, snapshot) {
+        
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Text("Error!: ${snapshot.error}", style: const TextStyle(color: Colors.red));
+        }
+
+        
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return _buildNextCollectionUI("No Data Found!", "", "");
+        }
+
+        
+        
+        var allDocs = snapshot.data!.docs;
+        var scheduledDocs = allDocs.where((doc) {
+          var data = doc.data() as Map<String, dynamic>;
+          return data['status']?.toString().trim() == 'Scheduled'; 
+        }).toList();
+
+        
+        if (scheduledDocs.isEmpty) {
+          var firstDocData = allDocs.first.data() as Map<String, dynamic>;
+          String wrongStatus = firstDocData['status']?.toString() ?? 'No Status Field';
+          return _buildNextCollectionUI("Word Mismatch!", "Database එකේ තියෙන වචනේ: '$wrongStatus'", "");
+        }
+
+        
+        var data = scheduledDocs.first.data() as Map<String, dynamic>;
+        String date = data['date'] ?? "Unknown Date";
+        String time = data['time'] ?? "Unknown Time";
+        String route = data['route'] ?? "";
+
+        return _buildNextCollectionUI(date, "Pickup starts at $time", route);
+      },
+    );
+  }
+
+  Widget _buildNextCollectionUI(String title, String subtitle, String route) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -180,8 +228,8 @@ class ResidentHomeScreen extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
+        children: [
+          const Text(
             'NEXT COLLECTION',
             style: TextStyle(
               color: Colors.blue,
@@ -189,16 +237,23 @@ class ResidentHomeScreen extends StatelessWidget {
               fontSize: 12,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Wednesday, July 24th',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            title, 
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
-            'Pickup starts at 7:00 AM',
-            style: TextStyle(color: Colors.grey, fontSize: 13),
+            subtitle, 
+            style: const TextStyle(color: Colors.grey, fontSize: 13),
           ),
+          if (route.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Route: $route',
+              style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ]
         ],
       ),
     );
