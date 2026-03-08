@@ -1,12 +1,78 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:waste_wise/features/auth/screens/role_selection_screen.dart';
 
-class DriverProfileScreen extends StatelessWidget {
+class DriverProfileScreen extends StatefulWidget {
   const DriverProfileScreen({super.key});
 
   @override
+  State<DriverProfileScreen> createState() => _DriverProfileScreenState();
+}
+
+class _DriverProfileScreenState extends State<DriverProfileScreen> {
+  final Color brandGreen = const Color(0xFF1B5E36);
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String driverName = "Loading...";
+  String driverPhone = "Not Provided";
+  String driverEmail = "";
+  String vehicleNumber = "N/A";
+  int completedTrips = 0;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDriverData();
+  }
+
+  Future<void> _fetchDriverData() async {
+    try {
+      User? currentUser = _auth.currentUser;
+
+      if (currentUser != null && currentUser.email != null) {
+        String email = currentUser.email!;
+
+        DocumentSnapshot userDoc = await _firestore
+            .collection('users')
+            .doc(email)
+            .get();
+
+        QuerySnapshot scheduleSnapshot = await _firestore
+            .collection('schedules')
+            .where('driverId', isEqualTo: email)
+            .where('status', isEqualTo: 'Completed')
+            .get();
+
+        if (userDoc.exists) {
+          Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
+          setState(() {
+            driverName = data['name'] ?? "No Name";
+            driverEmail = data['email'] ?? email;
+            vehicleNumber = data['vehicleNumber'] ?? "N/A";
+            driverPhone = data['phone'] ?? "Add Phone Number";
+            completedTrips = scheduleSnapshot.docs.length;
+            isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching data: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    const Color brandGreen = Color(0xFF1B5E36);
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF1B5E36)),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -25,53 +91,20 @@ class DriverProfileScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 30),
 
-            
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: CircleAvatar(
-                radius: 55,
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: const NetworkImage(
-                  'https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-                ),
-                onBackgroundImageError: (_, __) {},
-                child: const Icon(Icons.person, size: 55, color: Colors.grey),
-              ),
-            ),
+      
+            _buildProfileImage(),
+
             const SizedBox(height: 20),
-            const Text(
-              "Rohan Perera",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              driverName,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 5),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: brandGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                "Truck Driver | ID: 12345",
-                style: TextStyle(
-                  color: brandGreen,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-            ),
+
+            _buildVehicleBadge(),
+
             const SizedBox(height: 35),
 
-            
             _buildInfoCard(
               title: "Performance Summary",
               children: [
@@ -81,7 +114,7 @@ class DriverProfileScreen extends StatelessWidget {
                     child: _buildFeaturedStat(
                       Icons.local_shipping_rounded,
                       "Total Trips Completed",
-                      "250",
+                      completedTrips.toString(),
                       brandGreen,
                     ),
                   ),
@@ -91,14 +124,13 @@ class DriverProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            
             _buildInfoCard(
               title: "Personal Information",
               children: [
                 _buildInfoTile(
                   Icons.phone_iphone_rounded,
                   "Contact Number",
-                  "+94 77 123 4567",
+                  driverPhone,
                   brandGreen,
                 ),
                 Divider(
@@ -109,7 +141,7 @@ class DriverProfileScreen extends StatelessWidget {
                 _buildInfoTile(
                   Icons.email_outlined,
                   "Email Address",
-                  "rohan.perera@exp.com",
+                  driverEmail,
                   brandGreen,
                 ),
               ],
@@ -117,15 +149,9 @@ class DriverProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            
             _buildInfoCard(
               title: "Account Actions",
               children: [
-                _buildActionTile(
-                  Icons.edit_note_rounded,
-                  "Edit Account Info",
-                  () {},
-                ),
                 _buildActionTile(
                   Icons.logout_rounded,
                   "Logout",
@@ -141,42 +167,44 @@ class DriverProfileScreen extends StatelessWidget {
     );
   }
 
- 
 
-  Widget _buildInfoCard({
-    required String title,
-    required List<Widget> children,
-  }) {
+  Widget _buildProfileImage() {
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 4),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-              fontSize: 11,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ...children,
-        ],
+      child: const CircleAvatar(
+        radius: 55,
+        backgroundColor: Color(0xFFE8F5E9),
+        backgroundImage: NetworkImage(
+          'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVehicleBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: brandGreen.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        "Vehicle: $vehicleNumber",
+        style: TextStyle(
+          color: brandGreen,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
       ),
     );
   }
@@ -219,6 +247,44 @@ class DriverProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildInfoCard({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(25),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title.toUpperCase(),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+              fontSize: 11,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
+    );
+  }
+
   Widget _buildInfoTile(
     IconData icon,
     String label,
@@ -236,23 +302,25 @@ class DriverProfileScreen extends StatelessWidget {
           child: Icon(icon, color: color, size: 22),
         ),
         const SizedBox(width: 15),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-                color: Colors.black87,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -297,45 +365,28 @@ class DriverProfileScreen extends StatelessWidget {
     );
   }
 
-  
-
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+      builder: (context) => AlertDialog(
+        title: const Text("Logout"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
           ),
-          title: const Text("Logout"),
-          content: const Text("Are you sure you want to log out?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () {
-                
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const RoleSelectionScreen(),
-                  ),
-                  (route) => false,
-                );
-              },
-              child: const Text(
-                "Logout",
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
+          TextButton(
+            onPressed: () => Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RoleSelectionScreen(),
               ),
+              (r) => false,
             ),
-          ],
-        );
-      },
+            child: const Text("Logout"),
+          ),
+        ],
+      ),
     );
   }
 }
