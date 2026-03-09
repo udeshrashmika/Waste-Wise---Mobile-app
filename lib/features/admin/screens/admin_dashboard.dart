@@ -4,18 +4,22 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 
- 
-  Color _getStatusColor(String status) {
-    if (status == 'Full') return Colors.red;
-    if (status == 'Half-Full') return Colors.orange;
-    return const Color(0xFF1B5E36); 
+  Color _getStatusColor(int levelCode) {
+    if (levelCode == 2) return Colors.red;
+    if (levelCode == 1) return Colors.orange;
+    return const Color(0xFF1B5E36);
   }
 
-  
-  double _getDisplayLevel(String status) {
-    if (status == 'Full') return 1.0; 
-    if (status == 'Half-Full') return 0.5; 
-    return 0.05; 
+  double _getDisplayLevel(int levelCode) {
+    if (levelCode == 2) return 1.0;
+    if (levelCode == 1) return 0.5;
+    return 0.05;
+  }
+
+  String _getStatusText(int levelCode) {
+    if (levelCode == 2) return 'Full';
+    if (levelCode == 1) return 'Half-Full';
+    return 'Empty';
   }
 
   @override
@@ -33,11 +37,9 @@ class AdminDashboard extends StatelessWidget {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('bins').snapshots(),
         builder: (context, snapshot) {
-          
           if (snapshot.hasError) {
             return const Center(child: Text('Something went wrong! ⚠️'));
           }
@@ -45,16 +47,19 @@ class AdminDashboard extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          
           final docs = snapshot.data!.docs;
-          
+
           int totalPoints = docs.length;
-          
-          int fullBins = docs.where((doc) => doc['status'] == 'Full').length;
-          
-          int halfFullBins = docs.where((doc) => doc['status'] == 'Half-Full').length;
-          
-          int activeDrivers = 1; 
+
+          int fullBins = docs.where((doc) {
+            return (doc.data() as Map<String, dynamic>)['levelCode'] == 2;
+          }).length;
+
+          int halfFullBins = docs.where((doc) {
+            return (doc.data() as Map<String, dynamic>)['levelCode'] == 1;
+          }).length;
+
+          int activeDrivers = 1;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
@@ -66,8 +71,6 @@ class AdminDashboard extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-
-               
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -79,32 +82,37 @@ class AdminDashboard extends StatelessWidget {
                     _buildStatCard("Total Points", "$totalPoints", brandGreen),
                     _buildStatCard("Full Bins", "$fullBins", Colors.red),
                     _buildStatCard("Half-Full", "$halfFullBins", Colors.orange),
-                    _buildStatCard("Active Drivers", "$activeDrivers", Colors.blue),
+                    _buildStatCard(
+                      "Active Drivers",
+                      "$activeDrivers",
+                      Colors.blue,
+                    ),
                   ],
                 ),
-
                 const SizedBox(height: 30),
-
                 const Text(
                   "Garbage Point Locations",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-
-                
                 Column(
                   children: docs.map((doc) {
-                    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-                    
-                    
-                    String locationName = data['location'] ?? 'Unknown Location'; 
-                    String status = data['status'] ?? 'Empty';
+                    Map<String, dynamic> data =
+                        doc.data() as Map<String, dynamic>;
+
+                    String locationName =
+                        data['locationName'] ?? 'Unknown Location';
+                    String binId = doc.id;
+
+                    int levelCode = data['levelCode'] ?? 0;
+
+                    String displayTitle = '$binId - $locationName';
 
                     return _buildLocationTile(
-                      locationName,
-                      _getDisplayLevel(status),
-                      _getStatusColor(status),
-                      status,
+                      displayTitle,
+                      _getDisplayLevel(levelCode),
+                      _getStatusColor(levelCode),
+                      _getStatusText(levelCode),
                     );
                   }).toList(),
                 ),
@@ -124,7 +132,11 @@ class AdminDashboard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         border: Border(left: BorderSide(color: color, width: 4)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -146,7 +158,12 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildLocationTile(String location, double level, Color color, String statusText) {
+  Widget _buildLocationTile(
+    String location,
+    double level,
+    Color color,
+    String statusText,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -172,7 +189,10 @@ class AdminDashboard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     location,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ],
               ),
