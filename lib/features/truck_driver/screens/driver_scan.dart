@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:firebase_auth/firebase_auth.dart'; 
 
 class DriverScanScreen extends StatefulWidget {
   const DriverScanScreen({super.key});
@@ -10,8 +11,13 @@ class DriverScanScreen extends StatefulWidget {
 }
 
 class _DriverScanScreenState extends State<DriverScanScreen> {
+  
+  
   final MobileScannerController controller = MobileScannerController(
-    detectionSpeed: DetectionSpeed.noDuplicates,
+    detectionSpeed: DetectionSpeed.normal, 
+    detectionTimeoutMs: 1000, 
+    facing: CameraFacing.back, 
+    formats: const [BarcodeFormat.qrCode], 
     returnImage: false,
   );
 
@@ -46,7 +52,6 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
             ),
             const SizedBox(height: 20),
 
-          
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
@@ -55,67 +60,88 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
                   children: [
                     MobileScanner(
                       controller: controller,
-   onDetect: (capture) {
-  if (!isScanned) {
-    final List<Barcode> barcodes = capture.barcodes;
-    for (final barcode in barcodes) {
-      setState(() {
-        isScanned = true;
-      });
+                      onDetect: (capture) async {
+                        if (!isScanned) {
+                          final List<Barcode> barcodes = capture.barcodes;
+                          if (barcodes.isNotEmpty) {
+                            setState(() {
+                              isScanned = true; 
+                            });
 
-     
-
-      
-      String rawQr = barcode.rawValue ?? "Unknown_Bin";
-      
-      String binId = rawQr.replaceAll(RegExp(r'[^\w\s]+'), '_'); 
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Processing... Please wait ⏳")),
-      );
                             
-                            FirebaseFirestore.instance.collection('bins').doc(binId).set({
-                              'bin_id': binId,
-                              'status': 'Empty', 
-                              'last_collected': FieldValue.serverTimestamp(),
-                              'collected_by': 'Driver Asanka', 
-                              'location': 'Block A', 
-                              'fill_level': 0,
-                            }, SetOptions(merge: true)).then((_) {
+                            String binId = barcodes.first.rawValue?.trim() ?? "";
+
+                            if (binId.isEmpty) {
+                              setState(() => isScanned = false);
+                              return;
+                            }
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Processing... Please wait ⏳")),
+                            );
+                            
+                            try {
                               
+                              await FirebaseFirestore.instance.collection('bins').doc(binId).update({
+                                'status': 'Empty', 
+                                'fill_level': 0, 
+                                'levelCode': 0, 
+                                'last_collected': FieldValue.serverTimestamp(),
+                              });
+
                               
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("Success! Bin $binId Collected ✅"),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                              
-                              
-                              Future.delayed(const Duration(seconds: 2), () {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user != null && user.email != null) {
+                                var scheduleQuery = await FirebaseFirestore.instance
+                                    .collection('schedules')
+                                    .where('driverId', isEqualTo: user.email)
+                                    .where('status', isEqualTo: 'In Progress') 
+                                    .limit(1)
+                                    .get();
+
+                                if (scheduleQuery.docs.isNotEmpty) {
+                                  var scheduleId = scheduleQuery.docs.first.id;
+                                  await FirebaseFirestore.instance
+                                      .collection('schedules')
+                                      .doc(scheduleId)
+                                      .update({'status': 'Completed'}); 
+                                }
+                              }
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Success! Trip Completed & Bin Empty ✅"),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                
+                                Future.delayed(const Duration(seconds: 2), () {
+                                  if (mounted) {
+                                    setState(() {
+                                      isScanned = false;
+                                    });
+                                  }
+                                });
+                              }
+                            } catch (error) {
+                              if (context.mounted) {
                                 setState(() {
                                   isScanned = false;
                                 });
-                              });
-
-                            }).catchError((error) {
-                             
-                              setState(() {
-                                isScanned = false;
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("Failed to update: $error"),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Failed: Bin not found or Error!"),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           }
                         }
                       },
                     ),
 
-                   
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.white, width: 2),
@@ -124,7 +150,6 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
                       width: 250,
                       height: 250,
                     ),
-                    
                     
                     const Positioned(top: 60, left: 40, child: CornerBracket(isTop: true, isLeft: true)),
                     const Positioned(top: 60, right: 40, child: CornerBracket(isTop: true, isLeft: false)),
@@ -135,7 +160,7 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
               ),
             ),
             const SizedBox(height: 30),
-             const Text("Point camera at the QR Code"),
+            const Text("Point camera at the QR Code"),
             const SizedBox(height: 30),
           ],
         ),
@@ -158,20 +183,8 @@ class CornerBracket extends StatelessWidget {
       height: size,
       child: Stack(
         children: [
-          Positioned(
-            top: isTop ? 0 : null,
-            bottom: isTop ? null : 0,
-            left: isLeft ? 0 : null,
-            right: isLeft ? null : 0,
-            child: Container(width: size, height: thickness, color: Colors.green),
-          ),
-          Positioned(
-            top: isTop ? 0 : null,
-            bottom: isTop ? null : 0,
-            left: isLeft ? 0 : null,
-            right: isLeft ? null : 0,
-            child: Container(width: thickness, height: size, color: Colors.green),
-          ),
+          Positioned(top: isTop ? 0 : null, bottom: isTop ? null : 0, left: isLeft ? 0 : null, right: isLeft ? null : 0, child: Container(width: size, height: thickness, color: Colors.green)),
+          Positioned(top: isTop ? 0 : null, bottom: isTop ? null : 0, left: isLeft ? 0 : null, right: isLeft ? null : 0, child: Container(width: thickness, height: size, color: Colors.green)),
         ],
       ),
     );
