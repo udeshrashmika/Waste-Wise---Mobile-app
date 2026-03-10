@@ -37,17 +37,16 @@ class HistoryScreen extends StatelessWidget {
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("තාම History එකක් නැහැ."));
+            return const Center(child: Text("No History Yet."));
           }
 
           return ListView.builder(
             padding: const EdgeInsets.all(20),
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              // Document එක සහ ඒකේ ID එක වෙන වෙනම ගන්නවා
               var doc = snapshot.data!.docs[index];
               var data = doc.data() as Map<String, dynamic>;
-              String docId = doc.id; // මේක තමයි Delete කරන්න ඕන ID එක
+              String docId = doc.id;
 
               String formattedDate = "Just Now";
               if (data['timestamp'] != null) {
@@ -58,12 +57,10 @@ class HistoryScreen extends StatelessWidget {
               String status = data['status'] ?? "Unknown";
               bool isCollected = data['isCollected'] ?? false;
 
-              // Swipe to Delete පහසුකම සඳහා Dismissible භාවිතා කිරීම
               return Dismissible(
-                key: Key(docId), // හැම item එකකටම unique key එකක් ඕන
-                direction:
-                    DismissDirection.endToStart, // දකුණේ ඉඳන් වමට Swipe කරන්න
-                // Swipe කරද්දි පේන රතු පාට Background එක
+                key: Key(docId),
+                direction: DismissDirection.endToStart,
+
                 background: Container(
                   margin: const EdgeInsets.only(bottom: 15),
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -79,9 +76,7 @@ class HistoryScreen extends StatelessWidget {
                   ),
                 ),
 
-                // Swipe කරලා ඉවර වුණාම වෙන දේ
                 onDismissed: (direction) async {
-                  // Firestore එකෙන් අදාළ record එක Delete කරනවා
                   await FirebaseFirestore.instance
                       .collection('users')
                       .doc(uid)
@@ -89,7 +84,6 @@ class HistoryScreen extends StatelessWidget {
                       .doc(docId)
                       .delete();
 
-                  // User ට Delete වුණා කියලා පොඩි පණිවිඩයක් පෙන්වනවා
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
