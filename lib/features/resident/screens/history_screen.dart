@@ -37,7 +37,7 @@ class HistoryScreen extends StatelessWidget {
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("තාම History එකක් නැහැ."));
+            return const Center(child: Text("No History Yet."));
           }
 
           return ListView.builder(
