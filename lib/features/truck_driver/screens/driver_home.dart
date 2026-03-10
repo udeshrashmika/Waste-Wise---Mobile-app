@@ -13,15 +13,13 @@ class DriverHomeScreen extends StatefulWidget {
 }
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
-  
   final LatLng currentLoc = const LatLng(6.9344, 79.8428); 
   final LatLng destLoc = const LatLng(6.9147, 79.8516); 
 
-  
-  final user = FirebaseAuth.instance.currentUser;
-
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -29,39 +27,37 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false, 
       ),
-      
       
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('schedules') 
-            .where('driverId', isEqualTo: user?.uid) 
-            .where('status', isEqualTo: 'Pending') 
+            .where('driverId', isEqualTo: user?.email)
             .snapshots(),
         builder: (context, snapshot) {
-          
           
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
-          
+          if (snapshot.hasError) {
+             return Center(child: Text("Error: ${snapshot.error}", style: const TextStyle(color: Colors.red)));
+          }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle_outline, size: 80, color: Colors.green.shade200),
-                  const SizedBox(height: 20),
-                  const Text("No active tasks! You're all caught up.", style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            );
+            return _buildNoTasksUI(); 
           }
 
-         
-          var task = snapshot.data!.docs.first; 
+          var allTasks = snapshot.data!.docs;
+          var activeTasks = allTasks.where((doc) {
+            var data = doc.data() as Map<String, dynamic>;
+            return data['status'] == 'Scheduled' || data['status'] == 'In Progress';
+          }).toList();
+
+          if (activeTasks.isEmpty) {
+            return _buildNoTasksUI();
+          }
+
+          var task = activeTasks.first; 
           Map<String, dynamic> data = task.data() as Map<String, dynamic>;
 
           return Padding(
@@ -69,7 +65,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 10),
-                
                 Container(
                   padding: const EdgeInsets.all(25),
                   decoration: BoxDecoration(
@@ -80,12 +75,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     children: [
                       const Text("Route Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 20),
-                     
-                      _buildInfoRow(Icons.map, "Route", data['route'] ?? 'Unknown Route'),
-                      const SizedBox(height: 10),
-                      _buildInfoRow(Icons.timelapse, "Time", data['time'] ?? '00:00'),
-                      const SizedBox(height: 10),
-                      _buildInfoRow(Icons.info_outline, "Status", data['status'] ?? 'Pending'),
+                      
+                      _buildRouteRow(Icons.explore_outlined, "Route Name", data['route'] ?? 'Unknown Route'),
+                      const SizedBox(height: 15),
+                      _buildRouteRow(Icons.access_time_rounded, "Time", data['time'] ?? '00:00'),
+                      const SizedBox(height: 15),
+                      _buildRouteRow(Icons.info_outline, "Status", data['status'] ?? 'No status'),
                     ],
                   ),
                 ),
@@ -128,7 +123,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ),
                 const SizedBox(height: 25),
 
-                
                 SizedBox(
                   width: double.infinity,
                   height: 55,
@@ -137,15 +131,30 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       backgroundColor: const Color(0xFF1B5E20),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const DriverMainLayout(initialIndex: 1),
-                        ),
-                      );
+                    onPressed: () async {
+                       
+                       try {
+                         await FirebaseFirestore.instance
+                             .collection('schedules')
+                             .doc(task.id) 
+                             .update({'status': 'In Progress'});
+                         
+                         if (context.mounted) {
+                           Navigator.pushReplacement(
+                             context,
+                             MaterialPageRoute(
+                               builder: (context) => const DriverMainLayout(initialIndex: 1),
+                             ),
+                           );
+                         }
+                       } catch (e) {
+                         ScaffoldMessenger.of(context).showSnackBar(
+                           SnackBar(content: Text("Error updating status: $e")),
+                         );
+                       }
                     },
-                    child: const Text("CONFIRM PICKUP", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    child: const Text("CONFIRM PICKUP",
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -158,14 +167,35 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  Widget _buildRouteRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, color: Colors.grey),
-        const SizedBox(width: 10),
-        Text("$label: ", style: const TextStyle(color: Colors.grey)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        CircleAvatar(
+          backgroundColor: Colors.white,
+          child: Icon(icon, color: Colors.black, size: 20),
+        ),
+        const SizedBox(width: 15),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ],
+        ),
       ],
+    );
+  }
+
+  Widget _buildNoTasksUI() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.check_circle_outline, size: 80, color: Colors.green.shade300),
+          const SizedBox(height: 10),
+          const Text("No active tasks! You're all caught up.", style: TextStyle(color: Colors.grey)),
+        ],
+      ),
     );
   }
 }
