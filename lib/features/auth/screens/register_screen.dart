@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final String userRole;
+  const RegisterScreen({super.key, this.userRole = 'Resident'});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -12,8 +13,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _apartmentController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  String? _selectedBlock;
+  final List<String> _blocks = [
+    'Block A',
+    'Block B',
+    'Block C',
+    'Block D',
+    'Block E',
+  ];
 
   final AuthService _authService = AuthService();
   bool _isLoading = false;
@@ -23,23 +32,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _apartmentController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _handleRegister() async {
-    print("🟢 Register Button Pressed!");
-
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
-    final apartment = _apartmentController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
+    bool isResident = widget.userRole == 'Resident';
+
+    if (name.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        password.isEmpty ||
+        (isResident && _selectedBlock == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill in all required fields")),
+        const SnackBar(content: Text("Please fill in all fields")),
       );
       return;
     }
@@ -51,7 +62,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       password: password,
       fullName: name,
       phoneNumber: phone,
-      apartmentId: apartment,
+      apartmentId: isResident ? _selectedBlock! : 'N/A',
+      role: widget.userRole,
     );
 
     setState(() => _isLoading = false);
@@ -73,6 +85,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     const Color brandGreen = Color(0xFF1B5E36);
     const Color accentGreen = Color(0xFF2D8B49);
 
+    bool isResident = widget.userRole == 'Resident';
+    debugPrint("DEBUG: Registering as ${widget.userRole}");
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -89,14 +104,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             children: [
               const Icon(Icons.eco_rounded, size: 70, color: accentGreen),
-              const Text(
-                'Create Account',
-                style: TextStyle(
+              Text(
+                isResident ? 'Create Account' : 'Driver Registration',
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
               ),
+              if (!isResident)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Chip(
+                    label: Text(widget.userRole.toUpperCase()),
+                    backgroundColor: accentGreen.withOpacity(0.1),
+                    labelStyle: const TextStyle(
+                      color: accentGreen,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 10),
               const Text(
                 'Join Waste Wise for a Cleaner Sri Lanka',
@@ -122,12 +149,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hint: 'Phone Number',
               ),
               const SizedBox(height: 15),
-              _buildRegisterField(
-                controller: _apartmentController,
-                icon: Icons.apartment_outlined,
-                hint: 'Apartment ID (Residents Only)',
-              ),
-              const SizedBox(height: 15),
+
+              if (isResident) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F1F1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedBlock,
+                      hint: const Text(
+                        "Select Apartment Block",
+                        style: TextStyle(color: Colors.black54, fontSize: 14),
+                      ),
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(
+                          Icons.apartment_outlined,
+                          color: Colors.black54,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      items: _blocks.map((String block) {
+                        return DropdownMenuItem<String>(
+                          value: block,
+                          child: Text(block),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setState(() => _selectedBlock = val),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+              ],
+
               _buildRegisterField(
                 controller: _passwordController,
                 icon: Icons.lock_outline,
@@ -160,23 +220,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Already have an account? "),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(
-                        color: accentGreen,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),

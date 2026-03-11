@@ -61,6 +61,7 @@ class AuthService {
     required String fullName,
     required String phoneNumber,
     String? apartmentId,
+    required String role,
   }) async {
     try {
       DocumentSnapshot invitedDoc = await _db

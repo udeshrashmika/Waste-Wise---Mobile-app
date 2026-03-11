@@ -191,7 +191,8 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const RegisterScreen(),
+                              builder: (context) =>
+                                  RegisterScreen(userRole: widget.userRole),
                             ),
                           );
                         },
