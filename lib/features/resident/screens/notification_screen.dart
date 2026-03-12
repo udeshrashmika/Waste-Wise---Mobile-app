@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; 
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ignore: unused_local_variable
     const Color brandGreen = Color(0xFF1B5E36);
+    const String residentBlock = "Block A"; 
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -14,56 +16,73 @@ class NotificationScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'Alerts & Activity',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildNotificationSection("Today"),
-          _buildNotificationCard(
-            icon: Icons.check_circle_rounded,
-            iconColor: Colors.green,
-            title: "Disposal Completed",
-            message: "The truck driver has collected your waste at 7:45 AM.",
-            time: "2h ago",
-          ),
-          const SizedBox(height: 20),
-          _buildNotificationSection("Yesterday"),
-          _buildNotificationCard(
-            icon: Icons.error_outline_rounded,
-            iconColor: Colors.orange,
-            title: "Bin Almost Full",
-            message:
-                "Your AI scan detected 'Half-Full'. Consider a pickup soon.",
-            time: "1d ago",
-          ),
-          _buildNotificationCard(
-            icon: Icons.calendar_month_rounded,
-            iconColor: Colors.blue,
-            title: "Schedule Updated",
-            message: "Next collection date: Wednesday, July 24th.",
-            time: "1d ago",
-          ),
-        ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('notifications')
+            .where('blockID', isEqualTo: residentBlock)
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(child: Text("Error loading alerts"));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: brandGreen));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No new alerts for your area."));
+          }
+
+          final notifications = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: notifications.length,
+            itemBuilder: (context, index) {
+              var data = notifications[index].data() as Map<String, dynamic>;
+              
+              return _buildNotificationCard(
+                icon: _getIconForType(data['type']),
+                iconColor: _getColorForType(data['type'], brandGreen),
+                title: data['title'] ?? 'Update',
+                message: data['message'] ?? '',
+                time: _formatTimestamp(data['timestamp']),
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  Widget _buildNotificationSection(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12, left: 4),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey,
-        ),
-      ),
-    );
+  IconData _getIconForType(String? type) {
+    switch (type) {
+      case 'collection': return Icons.check_circle_rounded;
+      case 'warning': return Icons.error_outline_rounded;
+      case 'schedule': return Icons.calendar_month_rounded;
+      default: return Icons.notifications_none_rounded;
+    }
+  }
+
+  Color _getColorForType(String? type, Color brand) {
+    if (type == 'warning') return Colors.orange;
+    if (type == 'schedule') return Colors.blue;
+    return brand;
+  }
+
+  String _formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return "Just now";
+    DateTime dateTime = timestamp.toDate();
+    return DateFormat('jm').format(dateTime);
   }
 
   Widget _buildNotificationCard({
@@ -104,10 +123,7 @@ class NotificationScreen extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                     Text(
                       time,
@@ -118,11 +134,7 @@ class NotificationScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
+                  style: const TextStyle(color: Colors.black54, fontSize: 13, height: 1.4),
                 ),
               ],
             ),
