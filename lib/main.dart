@@ -1,213 +1,94 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'features/admin/screens/truck_fleet_status_screen.dart';
-import 'features/admin/screens/waste_analytics_screen.dart';
-import 'features/admin/screens/manage_residents_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
+import 'features/auth/screens/login_screen.dart';
+import 'features/resident/screens/resident_main_layout.dart';
+import 'features/admin/screens/admin_main_layout.dart';
+import 'features/truck_driver/screens/driver_main_layout.dart';
 
-class AdminProfileScreen extends StatelessWidget {
-  const AdminProfileScreen({super.key});
+import 'services/classifier_service.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  try {
+    await ClassifierService.loadModel();
+    print("✅ AI Model loaded successfully");
+  } catch (e) {
+    print("❌ Error loading AI Model: $e");
+  }
+
+  runApp(const WasteWiseApp());
+}
+
+class WasteWiseApp extends StatelessWidget {
+  const WasteWiseApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const Color adminGreen = Color(0xFF1B5E36);
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Admin Settings',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'WasteWise',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1B5E36),
+          primary: const Color(0xFF2D8B49),
+          surface: Colors.white,
         ),
+        fontFamily: 'Inter',
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 30),
-
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                const CircleAvatar(
-                  radius: 55,
-                  backgroundColor: adminGreen,
-                  child: Icon(
-                    Icons.admin_panel_settings_rounded,
-                    size: 60,
-                    color: Colors.white,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.verified_user,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 15),
-            const Text(
-              "System Administrator",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const Text(
-              "admin.portal@wastewise.lk",
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 30),
-
-            _buildAdminCard(
-              title: "System Management",
-              children: [
-                _buildAdminTile(
-                  Icons.people_outline_rounded,
-                  "Manage Residents",
-                  () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ManageResidentsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                _buildAdminTile(
-                  Icons.local_shipping_outlined,
-                  "Truck Fleet Status",
-                  () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TruckFleetStatusScreen(),
-                      ),
-                    );
-                  },
-                ),
-                _buildAdminTile(
-                  Icons.analytics_outlined,
-                  "Waste Analytics Report",
-                  () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const WasteAnalyticsScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            _buildAdminCard(
-              title: "Account Security",
-              children: [
-                _buildAdminTile(
-                  Icons.logout_rounded,
-                  "Logout System",
-                  () => _showLogoutDialog(context),
-                  isLogout: true,
-                ),
-              ],
-            ),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
+      home: const AuthWrapper(),
     );
   }
+}
 
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Exit Admin Portal?"),
-        content: const Text(
-          "This will end your current administrative session.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Stay"),
-          ),
-          TextButton(
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
 
-              if (context.mounted) {
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil('/', (route) => false);
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasData && snapshot.data != null) {
+          return FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(snapshot.data!.uid)
+                .get(),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
               }
+
+              if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                String role = userSnapshot.data!['role'];
+
+                if (role == 'Admin') return const AdminMainLayout();
+                if (role == 'Truck Driver') return const DriverMainLayout();
+                if (role == 'Resident') return const ResidentMainLayout();
+              }
+
+              return const UniversalLoginScreen();
             },
-            child: const Text(
-              "Logout",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+          );
+        }
 
-  Widget _buildAdminCard({
-    required String title,
-    required List<Widget> children,
-  }) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdminTile(
-    IconData icon,
-    String label,
-    VoidCallback onTap, {
-    bool isLogout = false,
-  }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: isLogout ? Colors.red : Colors.black87),
-      title: Text(
-        label,
-        style: TextStyle(color: isLogout ? Colors.red : Colors.black87),
-      ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-      onTap: onTap,
+        return const UniversalLoginScreen();
+      },
     );
   }
 }

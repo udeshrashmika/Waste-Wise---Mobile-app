@@ -12,7 +12,6 @@ class DriverScanScreen extends StatefulWidget {
 
 class _DriverScanScreenState extends State<DriverScanScreen> {
   
-  
   final MobileScannerController controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal, 
     detectionTimeoutMs: 1000, 
@@ -68,7 +67,6 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
                               isScanned = true; 
                             });
 
-                            
                             String binId = barcodes.first.rawValue?.trim() ?? "";
 
                             if (binId.isEmpty) {
@@ -108,10 +106,23 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
                                 }
                               }
 
+                              
+                              
+                              String blockLetter = binId.split('-').first;
+                              String blockID = "Block $blockLetter"; 
+
+                              await FirebaseFirestore.instance.collection('notifications').add({
+                                'blockID': blockID,
+                                'type': 'collection',
+                                'title': 'Disposal Completed ✅',
+                                'message': 'Waste for $blockID has been successfully collected by the driver. Thank you for keeping the environment clean!',
+                                'timestamp': FieldValue.serverTimestamp(),
+                              });
+
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text("Success! Trip Completed & Bin Empty ✅"),
+                                    content: Text("Success! Trip Completed & Residents Notified ✅"),
                                     backgroundColor: Colors.green,
                                   ),
                                 );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; 
+import 'package:firebase_auth/firebase_auth.dart'; 
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
@@ -8,7 +9,9 @@ class NotificationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color brandGreen = Color(0xFF1B5E36);
-    const String residentBlock = "Block A"; 
+    
+    
+    final String? uid = FirebaseAuth.instance.currentUser?.uid; 
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -25,42 +28,69 @@ class NotificationScreen extends StatelessWidget {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('notifications')
-            .where('blockID', isEqualTo: residentBlock)
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text("Error loading alerts"));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: brandGreen));
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No new alerts for your area."));
-          }
-
-          final notifications = snapshot.data!.docs;
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              var data = notifications[index].data() as Map<String, dynamic>;
+      
+      body: uid == null 
+          ? const Center(child: Text("Please log in to view alerts."))
+          : FutureBuilder<DocumentSnapshot>(
               
-              return _buildNotificationCard(
-                icon: _getIconForType(data['type']),
-                iconColor: _getColorForType(data['type'], brandGreen),
-                title: data['title'] ?? 'Update',
-                message: data['message'] ?? '',
-                time: _formatTimestamp(data['timestamp']),
-              );
-            },
-          );
-        },
-      ),
+              future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+              builder: (context, userSnapshot) {
+                if (userSnapshot.hasError) {
+                  return const Center(child: Text("Error loading user profile"));
+                }
+                if (userSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: brandGreen));
+                }
+                if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                  return const Center(child: Text("User profile not found."));
+                }
+
+                var userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                
+                
+                
+                
+                String residentBlock = userData?['blockID'] ?? 'Unknown Block';
+
+                
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('notifications')
+                      .where('blockID', isEqualTo: residentBlock) 
+                      .orderBy('timestamp', descending: true)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Center(child: Text("Error loading alerts"));
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator(color: brandGreen));
+                    }
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return Center(child: Text("No new alerts for $residentBlock."));
+                    }
+
+                    final notifications = snapshot.data!.docs;
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: notifications.length,
+                      itemBuilder: (context, index) {
+                        var data = notifications[index].data() as Map<String, dynamic>;
+                        
+                        return _buildNotificationCard(
+                          icon: _getIconForType(data['type']),
+                          iconColor: _getColorForType(data['type'], brandGreen),
+                          title: data['title'] ?? 'Update',
+                          message: data['message'] ?? '',
+                          time: _formatTimestamp(data['timestamp']),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
     );
   }
 
