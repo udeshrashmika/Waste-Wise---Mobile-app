@@ -51,16 +51,22 @@ class HistoryScreen extends StatelessWidget {
               String formattedDate = "Just Now";
               if (data['timestamp'] != null) {
                 DateTime date = (data['timestamp'] as Timestamp).toDate();
-                formattedDate = "${date.day}/${date.month}/${date.year}";
+
+                int hour12 = date.hour % 12;
+                hour12 = hour12 == 0 ? 12 : hour12;
+                String minute = date.minute.toString().padLeft(2, '0');
+                String amPm = date.hour >= 12 ? "PM" : "AM";
+
+                formattedDate =
+                    "${date.day}/${date.month}/${date.year}  $hour12:$minute $amPm";
               }
 
               String status = data['status'] ?? "Unknown";
-              bool isCollected = data['isCollected'] ?? false;
+              String binId = data['binId'] ?? "Unknown Bin";
 
               return Dismissible(
                 key: Key(docId),
                 direction: DismissDirection.endToStart,
-
                 background: Container(
                   margin: const EdgeInsets.only(bottom: 15),
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -75,7 +81,6 @@ class HistoryScreen extends StatelessWidget {
                     size: 30,
                   ),
                 ),
-
                 onDismissed: (direction) async {
                   await FirebaseFirestore.instance
                       .collection('users')
@@ -96,7 +101,7 @@ class HistoryScreen extends StatelessWidget {
                 child: _buildHistoryCard(
                   date: formattedDate,
                   status: status,
-                  isCollected: isCollected,
+                  binId: binId,
                 ),
               );
             },
@@ -109,7 +114,7 @@ class HistoryScreen extends StatelessWidget {
   Widget _buildHistoryCard({
     required String date,
     required String status,
-    required bool isCollected,
+    required String binId,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -144,34 +149,23 @@ class HistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  date,
+                  "Bin: $binId",
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  date,
+                  style: const TextStyle(color: Colors.black87, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
                 Text(
                   "Detection: $status",
                   style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: isCollected
-                  ? Colors.green.withOpacity(0.1)
-                  : Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              isCollected ? "Collected" : "Pending",
-              style: TextStyle(
-                color: isCollected ? Colors.green : Colors.orange,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
             ),
           ),
         ],
