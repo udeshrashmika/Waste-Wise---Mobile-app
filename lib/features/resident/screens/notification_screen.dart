@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; 
-import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:intl/intl.dart';
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
@@ -9,9 +8,7 @@ class NotificationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color brandGreen = Color(0xFF1B5E36);
-    
-    
-    final String? uid = FirebaseAuth.instance.currentUser?.uid; 
+    const String residentBlock = "Block A";
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -28,78 +25,57 @@ class NotificationScreen extends StatelessWidget {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      
-      body: uid == null 
-          ? const Center(child: Text("Please log in to view alerts."))
-          : FutureBuilder<DocumentSnapshot>(
-              
-              future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
-              builder: (context, userSnapshot) {
-                if (userSnapshot.hasError) {
-                  return const Center(child: Text("Error loading user profile"));
-                }
-                if (userSnapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: brandGreen));
-                }
-                if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                  return const Center(child: Text("User profile not found."));
-                }
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('notifications')
+            .where('blockID', isEqualTo: residentBlock)
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(child: Text("Error loading alerts"));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: brandGreen),
+            );
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No new alerts for your area."));
+          }
 
-                var userData = userSnapshot.data!.data() as Map<String, dynamic>?;
-                
-                
-                
-                
-                String residentBlock = userData?['blockID'] ?? 'Unknown Block';
+          final notifications = snapshot.data!.docs;
 
-                
-                return StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('notifications')
-                      .where('blockID', isEqualTo: residentBlock) 
-                      .orderBy('timestamp', descending: true)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return const Center(child: Text("Error loading alerts"));
-                    }
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator(color: brandGreen));
-                    }
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      return Center(child: Text("No new alerts for $residentBlock."));
-                    }
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: notifications.length,
+            itemBuilder: (context, index) {
+              var data = notifications[index].data() as Map<String, dynamic>;
 
-                    final notifications = snapshot.data!.docs;
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: notifications.length,
-                      itemBuilder: (context, index) {
-                        var data = notifications[index].data() as Map<String, dynamic>;
-                        
-                        return _buildNotificationCard(
-                          icon: _getIconForType(data['type']),
-                          iconColor: _getColorForType(data['type'], brandGreen),
-                          title: data['title'] ?? 'Update',
-                          message: data['message'] ?? '',
-                          time: _formatTimestamp(data['timestamp']),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
+              return _buildNotificationCard(
+                icon: _getIconForType(data['type']),
+                iconColor: _getColorForType(data['type'], brandGreen),
+                title: data['title'] ?? 'Update',
+                message: data['message'] ?? '',
+                time: _formatTimestamp(data['timestamp']),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
   IconData _getIconForType(String? type) {
     switch (type) {
-      case 'collection': return Icons.check_circle_rounded;
-      case 'warning': return Icons.error_outline_rounded;
-      case 'schedule': return Icons.calendar_month_rounded;
-      default: return Icons.notifications_none_rounded;
+      case 'collection':
+        return Icons.check_circle_rounded;
+      case 'warning':
+        return Icons.error_outline_rounded;
+      case 'schedule':
+        return Icons.calendar_month_rounded;
+      default:
+        return Icons.notifications_none_rounded;
     }
   }
 
@@ -109,9 +85,16 @@ class NotificationScreen extends StatelessWidget {
     return brand;
   }
 
-  String _formatTimestamp(Timestamp? timestamp) {
+  String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return "Just now";
-    DateTime dateTime = timestamp.toDate();
+
+    DateTime dateTime;
+    if (timestamp is Timestamp) {
+      dateTime = timestamp.toDate();
+    } else {
+      return "Just now";
+    }
+
     return DateFormat('jm').format(dateTime);
   }
 
@@ -153,7 +136,10 @@ class NotificationScreen extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                     Text(
                       time,
@@ -164,7 +150,11 @@ class NotificationScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: const TextStyle(color: Colors.black54, fontSize: 13, height: 1.4),
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
