@@ -20,8 +20,10 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
   final AuthService _authService = AuthService();
 
   String? selectedBinId;
+  String selectedWasteType = 'Organic';
   List<String> binIds = [];
   bool _isLoadingBins = true;
+  final List<String> wasteTypes = ['Organic', 'Plastic', 'Glass'];
 
   @override
   void initState() {
@@ -48,7 +50,6 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
       }
 
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-
       String? userApartmentId = userData['apartmentId']?.toString().trim();
 
       if (userApartmentId == null || userApartmentId.isEmpty) {
@@ -71,28 +72,20 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
         });
       }
     } catch (e) {
-      print("Error fetching bins: $e");
-      if (mounted) {
-        setState(() => _isLoadingBins = false);
-      }
+      debugPrint("Error fetching bins: $e");
+      if (mounted) setState(() => _isLoadingBins = false);
     }
   }
 
   int _getLevelCode(String status) {
     String s = status.toLowerCase();
-
-    if (s.contains("half")) {
-      return 1;
-    } else if (s.contains("full")) {
-      return 2;
-    } else {
-      return 0;
-    }
+    if (s.contains("half")) return 1;
+    if (s.contains("full")) return 2;
+    return 0;
   }
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? photo = await _picker.pickImage(source: source);
-
     if (photo != null) {
       setState(() {
         _image = File(photo.path);
@@ -101,16 +94,11 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
   }
 
   Future<void> _handleUsePhoto() async {
-    if (selectedBinId == null) {
+    if (selectedBinId == null || _image == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a bin first!")),
-      );
-      return;
-    }
-
-    if (_image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please take a photo first!")),
+        const SnackBar(
+          content: Text("Please select a bin and capture a photo!"),
+        ),
       );
       return;
     }
@@ -122,14 +110,18 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
 
       if (result != null) {
         final String uid = FirebaseAuth.instance.currentUser!.uid;
+        int levelCode = _getLevelCode(result);
 
         await _authService.updateBinStatus(uid: uid, status: result);
 
-        int levelCode = _getLevelCode(result);
         await FirebaseFirestore.instance
             .collection('bins')
             .doc(selectedBinId)
-            .update({'status': result, 'levelCode': levelCode});
+            .update({
+              'status': result,
+              'levelCode': levelCode,
+              'lastWasteType': selectedWasteType,
+            });
 
         await FirebaseFirestore.instance
             .collection('users')
@@ -138,12 +130,14 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
             .add({
               'binId': selectedBinId,
               'status': result,
+              'wasteType': selectedWasteType,
               'timestamp': FieldValue.serverTimestamp(),
               'isCollected': result.toLowerCase().contains("empty"),
             });
 
         if (!mounted) return;
-        _showResultDialog(result);
+
+        _showSuccessDialog(result);
       } else {
         throw Exception("Analysis failed to detect a level.");
       }
@@ -157,20 +151,53 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
     }
   }
 
-  void _showResultDialog(String level) {
+  void _showSuccessDialog(String level) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text("Analysis Complete"),
-        content: Text("Bin ($selectedBinId) is detected as: $level"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 10),
+            Text("Analysis Complete"),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Bin ID: $selectedBinId"),
+            Text("Waste Type: $selectedWasteType"),
+            const Divider(),
+            const Text(
+              "Detected Level:",
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+            Text(
+              level.toUpperCase(),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: Color(0xFF1B5E36),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               Navigator.pop(context);
             },
-            child: const Text("OK"),
+            child: const Text(
+              "DONE",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1B5E36),
+              ),
+            ),
           ),
         ],
       ),
@@ -180,7 +207,7 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
   @override
   Widget build(BuildContext context) {
     const Color brandGreen = Color(0xFF1B5E36);
-    const Color lightGreyBtn = Color(0xFFF3F3F3);
+    const Color lightGrey = Color(0xFFF5F5F5);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -196,8 +223,8 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "Upload Bin Photo",
-          style: TextStyle(color: Colors.black),
+          "Dispose Waste",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -205,155 +232,186 @@ class _UploadBinScreenState extends State<UploadBinScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           children: [
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
 
-            // Dropdown Section එක
+            _buildLabel("Select Your Bin"),
             if (_isLoadingBins)
-              const CircularProgressIndicator(color: brandGreen)
-            else if (binIds.isEmpty)
-              const Text(
-                "No bins found in your block.",
-                style: TextStyle(color: Colors.red),
-              )
+              const LinearProgressIndicator(color: brandGreen)
             else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEEEEEE),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedBinId,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down),
-                    items: binIds.map((String id) {
-                      return DropdownMenuItem<String>(
-                        value: id,
-                        child: Text(
-                          "Disposal Bin: $id",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        selectedBinId = newValue;
-                      });
-                    },
+              _buildDropdownContainer(
+                child: DropdownButton<String>(
+                  value: selectedBinId,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: brandGreen,
                   ),
+                  items: binIds
+                      .map(
+                        (id) => DropdownMenuItem(
+                          value: id,
+                          child: Text("Bin: $id"),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) => setState(() => selectedBinId = val),
                 ),
               ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 16),
 
-            const Text(
-              "Capture a clear photo\nof your Bin",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                height: 1.2,
+            _buildLabel("Waste Category"),
+            _buildDropdownContainer(
+              child: DropdownButton<String>(
+                value: selectedWasteType,
+                isExpanded: true,
+                underline: const SizedBox(),
+                icon: const Icon(Icons.recycling, color: brandGreen),
+                items: wasteTypes
+                    .map(
+                      (type) =>
+                          DropdownMenuItem(value: type, child: Text(type)),
+                    )
+                    .toList(),
+                onChanged: (val) => setState(() => selectedWasteType = val!),
               ),
             ),
+
             const SizedBox(height: 30),
 
-            Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(20),
-                image: _image != null
-                    ? DecorationImage(
-                        image: FileImage(_image!),
-                        fit: BoxFit.cover,
+            GestureDetector(
+              onTap: () => _pickImage(ImageSource.camera),
+              child: Container(
+                width: double.infinity,
+                height: 240,
+                decoration: BoxDecoration(
+                  color: lightGrey,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade300),
+                  image: _image != null
+                      ? DecorationImage(
+                          image: FileImage(_image!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: _image == null
+                    ? const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_a_photo_outlined,
+                            size: 60,
+                            color: brandGreen,
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            "Tap to capture bin level",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
                       )
                     : null,
               ),
-              child: _image == null
-                  ? const Center(
-                      child: Icon(Icons.camera_alt_outlined, size: 80),
-                    )
-                  : null,
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 30),
 
-            _buildIconBtn(
-              label: "Take photo",
-              icon: Icons.camera_alt_outlined,
-              bgColor: lightGreyBtn,
-              textColor: Colors.black,
-              onTap: () => _pickImage(ImageSource.camera),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionBtn(
+                    label: "Gallery",
+                    icon: Icons.photo_library_outlined,
+                    onTap: () => _pickImage(ImageSource.gallery),
+                  ),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: _buildActionBtn(
+                    label: "Retake",
+                    icon: Icons.refresh_rounded,
+                    onTap: () => _pickImage(ImageSource.camera),
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(height: 16),
-
-            _buildIconBtn(
-              label: "Choose from gallery",
-              icon: Icons.photo_library_outlined,
-              bgColor: lightGreyBtn,
-              textColor: Colors.black,
-              onTap: () => _pickImage(ImageSource.gallery),
-            ),
-
-            const SizedBox(height: 16),
+            const SizedBox(height: 25),
 
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 60,
               child: ElevatedButton(
                 onPressed: _isAnalyzing ? null : _handleUsePhoto,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: brandGreen,
+                  elevation: 2,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                 ),
                 child: _isAnalyzing
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                        "Use Photo",
-                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        "Analyze & Submit",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildIconBtn({
+  Widget _buildLabel(String text) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 8),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownContainer({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F3F3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonHideUnderline(child: child),
+    );
+  }
+
+  Widget _buildActionBtn({
     required String label,
     required IconData icon,
-    required Color bgColor,
-    required Color textColor,
     required VoidCallback onTap,
   }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, color: textColor),
-        label: Text(
-          label,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: bgColor,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 20, color: Colors.black87),
+      label: Text(label, style: const TextStyle(color: Colors.black87)),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        side: BorderSide(color: Colors.grey.shade300),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
