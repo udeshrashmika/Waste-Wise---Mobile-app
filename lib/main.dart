@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'manage_residents_screen.dart';
-import 'truck_fleet_status_screen.dart';
-import 'waste_analytics_screen.dart';
+import 'features/admin/screens/truck_fleet_status_screen.dart';
+import 'features/admin/screens/waste_analytics_screen.dart';
+import 'features/admin/screens/manage_residents_screen.dart';
 
 class AdminProfileScreen extends StatelessWidget {
   const AdminProfileScreen({super.key});
