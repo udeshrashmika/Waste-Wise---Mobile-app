@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:waste_wise/features/resident/screens/resident_main_layout.dart';
 import 'package:waste_wise/features/admin/screens/admin_main_layout.dart';
 import '../../truck_driver/screens/driver_main_layout.dart';
@@ -7,9 +8,9 @@ import 'register_screen.dart';
 import '../../../services/auth_service.dart';
 
 class UniversalLoginScreen extends StatefulWidget {
-  final String userRole;
+  final String? initialRoleHint;
 
-  const UniversalLoginScreen({super.key, required this.userRole});
+  const UniversalLoginScreen({super.key, this.initialRoleHint});
 
   @override
   State<UniversalLoginScreen> createState() => _UniversalLoginScreenState();
@@ -40,42 +41,48 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
     }
 
     setState(() => _isLoading = true);
-    String? firebaseRole = await _authService.loginAndGetRole(email, password);
 
-    setState(() => _isLoading = false);
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
 
-    if (firebaseRole == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login failed. Check your credentials.")),
-      );
-      return;
-    }
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
 
-    if (firebaseRole.trim().toLowerCase() ==
-        widget.userRole.trim().toLowerCase()) {
-      if (firebaseRole == 'Admin') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminMainLayout()),
-        );
-      } else if (firebaseRole == 'Truck Driver') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DriverMainLayout()),
-        );
-      } else if (firebaseRole == 'Resident') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const ResidentMainLayout()),
+      if (userDoc.exists) {
+        String firebaseRole = userDoc['role'];
+
+        if (!mounted) return;
+
+        if (firebaseRole == 'Admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminMainLayout()),
+          );
+        } else if (firebaseRole == 'Truck Driver') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DriverMainLayout()),
+          );
+        } else if (firebaseRole == 'Resident') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ResidentMainLayout()),
+          );
+        }
+      } else {
+        throw Exception("User data not found in database.");
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Login failed: ${e.toString()}")),
         );
       }
-    } else {
-      await FirebaseAuth.instance.signOut();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Access Denied: You are registered as $firebaseRole"),
-        ),
-      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -109,10 +116,10 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  'Login as ${widget.userRole}',
-                  style: const TextStyle(
+                const SizedBox(height: 40),
+                const Text(
+                  'Login to Your Account',
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -137,16 +144,6 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
                   hint: 'Password',
                   isPassword: true,
                 ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      'Forgot Password?',
-                      style: TextStyle(color: accentGreen),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 30),
                 SizedBox(
                   width: 180,
@@ -157,69 +154,40 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 4,
                     ),
                     onPressed: _isLoading ? null : () => _handleLogin(context),
                     child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
+                        ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
                             'Login',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: Colors.white),
                           ),
                   ),
                 ),
                 const SizedBox(height: 25),
-
-                if (widget.userRole == 'Resident' ||
-                    widget.userRole == 'Truck Driver')
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Don't have an account? "),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RegisterScreen(userRole: widget.userRole),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          widget.userRole == 'Truck Driver'
-                              ? 'Accept Invite'
-                              : 'Create account',
-                          style: const TextStyle(
-                            color: Colors.lightBlue,
-                            fontWeight: FontWeight.bold,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Don't have an account? "),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterScreen(),
                           ),
+                        );
+                      },
+                      child: const Text(
+                        'Create account',
+                        style: TextStyle(
+                          color: Colors.lightBlue,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  )
-                else
-                  const Padding(
-                    padding: EdgeInsets.only(top: 10),
-                    child: Text(
-                      "Contact System Admin for access",
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
-                      ),
                     ),
-                  ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -242,7 +210,6 @@ class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
         fillColor: const Color(0xFFF1F1F1),
         prefixIcon: Icon(icon, color: Colors.black54),
         hintText: hint,
-        contentPadding: const EdgeInsets.symmetric(vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

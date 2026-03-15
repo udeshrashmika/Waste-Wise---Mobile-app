@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
-  final String userRole;
-  const RegisterScreen({super.key, this.userRole = 'Resident'});
+  const RegisterScreen({super.key});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -14,8 +13,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _vehicleController = TextEditingController();
 
+  String _selectedRole = 'Resident';
   String? _selectedBlock;
+
   final List<String> _blocks = [
     'Block A',
     'Block B',
@@ -23,7 +25,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     'Block D',
     'Block E',
   ];
-
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
@@ -33,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _vehicleController.dispose();
     super.dispose();
   }
 
@@ -41,14 +43,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
     final password = _passwordController.text.trim();
+    final vehicle = _vehicleController.text.trim();
 
-    bool isResident = widget.userRole == 'Resident';
+    bool isResident = _selectedRole == 'Resident';
 
     if (name.isEmpty ||
         email.isEmpty ||
         phone.isEmpty ||
         password.isEmpty ||
-        (isResident && _selectedBlock == null)) {
+        (isResident && _selectedBlock == null) ||
+        (!isResident && vehicle.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
       );
@@ -63,7 +67,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       fullName: name,
       phoneNumber: phone,
       apartmentId: isResident ? _selectedBlock! : 'N/A',
-      role: widget.userRole,
+      role: _selectedRole,
     );
 
     setState(() => _isLoading = false);
@@ -85,9 +89,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     const Color brandGreen = Color(0xFF1B5E36);
     const Color accentGreen = Color(0xFF2D8B49);
 
-    bool isResident = widget.userRole == 'Resident';
-    debugPrint("DEBUG: Registering as ${widget.userRole}");
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -104,33 +105,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             children: [
               const Icon(Icons.eco_rounded, size: 70, color: accentGreen),
-              Text(
-                isResident ? 'Create Account' : 'Driver Registration',
-                style: const TextStyle(
+              const Text(
+                'Create Account',
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
               ),
-              if (!isResident)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Chip(
-                    label: Text(widget.userRole.toUpperCase()),
-                    backgroundColor: accentGreen.withOpacity(0.1),
-                    labelStyle: const TextStyle(
-                      color: accentGreen,
-                      fontWeight: FontWeight.bold,
-                    ),
+              const SizedBox(height: 10),
+
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: accentGreen.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: accentGreen.withOpacity(0.2)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedRole,
+                    isExpanded: true,
+                    items: ['Resident', 'Truck Driver'].map((String role) {
+                      return DropdownMenuItem(
+                        value: role,
+                        child: Text("Register as $role"),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setState(() {
+                      _selectedRole = val!;
+                      _selectedBlock = null;
+                    }),
                   ),
                 ),
-              const SizedBox(height: 10),
-              const Text(
-                'Join Waste Wise for a Cleaner Sri Lanka',
-                style: TextStyle(fontSize: 13, color: Colors.grey),
               ),
-              const SizedBox(height: 30),
 
+              const SizedBox(height: 25),
               _buildRegisterField(
                 controller: _nameController,
                 icon: Icons.person_outline,
@@ -150,40 +160,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 15),
 
-              if (isResident) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F1F1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedBlock,
-                      hint: const Text(
-                        "Select Apartment Block",
-                        style: TextStyle(color: Colors.black54, fontSize: 14),
-                      ),
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(
-                          Icons.apartment_outlined,
-                          color: Colors.black54,
-                        ),
-                        border: InputBorder.none,
-                      ),
-                      items: _blocks.map((String block) {
-                        return DropdownMenuItem<String>(
-                          value: block,
-                          child: Text(block),
-                        );
-                      }).toList(),
-                      onChanged: (val) => setState(() => _selectedBlock = val),
-                    ),
-                  ),
+              if (_selectedRole == 'Resident') ...[
+                _buildBlockDropdown(),
+                const SizedBox(height: 15),
+              ] else ...[
+                _buildRegisterField(
+                  controller: _vehicleController,
+                  icon: Icons.local_shipping_outlined,
+                  hint: 'Vehicle Number',
                 ),
                 const SizedBox(height: 15),
               ],
@@ -213,7 +197,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           'Register',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -222,6 +205,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 20),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBlockDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F1F1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButtonFormField<String>(
+          value: _selectedBlock,
+          hint: const Text(
+            "Select Apartment Block",
+            style: TextStyle(color: Colors.black54, fontSize: 14),
+          ),
+          isExpanded: true,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.apartment_outlined, color: Colors.black54),
+            border: InputBorder.none,
+          ),
+          items: _blocks
+              .map(
+                (block) => DropdownMenuItem(value: block, child: Text(block)),
+              )
+              .toList(),
+          onChanged: (val) => setState(() => _selectedBlock = val),
         ),
       ),
     );

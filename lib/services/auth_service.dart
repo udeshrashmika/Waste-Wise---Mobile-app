@@ -35,7 +35,6 @@ class AuthService {
             .collection('users')
             .doc(user.uid)
             .get();
-
         if (uidDoc.exists) {
           return uidDoc.get('role') as String?;
         }
@@ -44,7 +43,6 @@ class AuthService {
             .collection('users')
             .doc(email)
             .get();
-
         if (emailDoc.exists) {
           return emailDoc.get('role') as String?;
         }
@@ -61,6 +59,7 @@ class AuthService {
     required String fullName,
     required String phoneNumber,
     String? apartmentId,
+    String? vehicleNumber,
     required String role,
   }) async {
     try {
@@ -91,10 +90,11 @@ class AuthService {
             'name': fullName,
             'email': email,
             'phone': phoneNumber,
-            'apartmentId': apartmentId,
-            'role': 'Resident',
+            'role': role,
             'currentBinLevel': 'Empty',
             'createdAt': FieldValue.serverTimestamp(),
+            if (role == 'Resident') 'apartmentId': apartmentId,
+            if (role == 'Truck Driver') 'vehicleNumber': vehicleNumber,
           });
         }
         return "success";
