@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:waste_wise/features/auth/screens/role_selection_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'manage_residents_screen.dart';
 import 'truck_fleet_status_screen.dart';
 import 'waste_analytics_screen.dart';
@@ -17,6 +17,7 @@ class AdminProfileScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false,
         title: const Text(
           'Admin Settings',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
@@ -74,7 +75,7 @@ class AdminProfileScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ManageResidentsScreen(),
+                        builder: (context) => const ManageResidentsScreen(),
                       ),
                     );
                   },
@@ -98,7 +99,7 @@ class AdminProfileScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => WasteAnalyticsScreen(),
+                        builder: (context) => const WasteAnalyticsScreen(),
                       ),
                     );
                   },
@@ -140,14 +141,14 @@ class AdminProfileScreen extends StatelessWidget {
             child: const Text("Stay"),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RoleSelectionScreen(),
-                ),
-                (route) => false,
-              );
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+
+              if (context.mounted) {
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/', (route) => false);
+              }
             },
             child: const Text(
               "Logout",

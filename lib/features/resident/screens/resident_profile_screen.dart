@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:waste_wise/features/auth/screens/role_selection_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,17 +13,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
 
   void _showEditProfileDialog(BuildContext context, Map<String, dynamic> data) {
+    final String role = data['role'] ?? 'Resident';
+
     final TextEditingController nameController = TextEditingController(
       text: data['name'],
     );
     final TextEditingController phoneController = TextEditingController(
       text: data['phone'],
     );
-    final TextEditingController apartmentController = TextEditingController(
-      text: data['apartmentId'],
-    );
     final TextEditingController emailController = TextEditingController(
       text: data['email'],
+    );
+
+    final TextEditingController extraFieldController = TextEditingController(
+      text: role == 'Resident' ? data['apartmentId'] : data['vehicleNumber'],
     );
 
     showDialog(
@@ -36,36 +38,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: "Full Name",
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                ),
+                _buildDialogField(nameController, "Full Name", Icons.person),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(
-                    labelText: "Email",
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                ),
+                _buildDialogField(emailController, "Email", Icons.email),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(
-                    labelText: "Phone Number",
-                    prefixIcon: Icon(Icons.phone),
-                  ),
-                ),
+                _buildDialogField(phoneController, "Phone Number", Icons.phone),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: apartmentController,
-                  decoration: const InputDecoration(
-                    labelText: "Apartment ID",
-                    prefixIcon: Icon(Icons.apartment),
-                  ),
+                _buildDialogField(
+                  extraFieldController,
+                  role == 'Resident' ? "Apartment ID" : "Vehicle Number",
+                  role == 'Resident' ? Icons.apartment : Icons.local_shipping,
                 ),
               ],
             ),
@@ -88,19 +70,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         'name': nameController.text.trim(),
                         'email': emailController.text.trim(),
                         'phone': phoneController.text.trim(),
-                        'apartmentId': apartmentController.text.trim(),
+                        role == 'Resident' ? 'apartmentId' : 'vehicleNumber':
+                            extraFieldController.text.trim(),
                       });
 
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Profile updated successfully!"),
-                    ),
-                  );
+                  if (context.mounted) Navigator.pop(context);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Profile updated successfully!"),
+                      ),
+                    );
+                  }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Error updating profile: $e")),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error updating profile: $e")),
+                    );
+                  }
                 }
               },
               child: const Text("Save", style: TextStyle(color: Colors.white)),
@@ -108,6 +95,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildDialogField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+  ) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
     );
   }
 
@@ -126,7 +124,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -138,16 +135,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: CircularProgressIndicator(color: brandGreen),
             );
           }
-
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-
           if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: Text("User data not found"));
           }
 
           var userData = snapshot.data!.data() as Map<String, dynamic>;
+          String role = userData['role'] ?? 'Resident';
 
           return SingleChildScrollView(
             child: Column(
@@ -159,7 +152,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Icon(Icons.person, size: 50, color: Colors.white),
                 ),
                 const SizedBox(height: 15),
-
                 Text(
                   userData['name'] ?? "No Name",
                   style: const TextStyle(
@@ -167,7 +159,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 Text(
                   userData['email'] ?? "No Email",
                   style: const TextStyle(color: Colors.grey),
@@ -175,12 +166,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 30),
 
                 _buildInfoCard(
-                  title: "Apartment Details",
+                  title: role == 'Resident'
+                      ? "Apartment Details"
+                      : "Vehicle Details",
                   children: [
                     _buildInfoTile(
-                      Icons.home_work_rounded,
-                      "Apartment ID",
-                      userData['apartmentId'] ?? "Not Set",
+                      role == 'Resident'
+                          ? Icons.home_work_rounded
+                          : Icons.local_shipping_rounded,
+                      role == 'Resident' ? "Apartment ID" : "Vehicle Number",
+                      role == 'Resident'
+                          ? (userData['apartmentId'] ?? "Not Set")
+                          : (userData['vehicleNumber'] ?? "Not Set"),
                       brandGreen,
                     ),
                     _buildInfoTile(
@@ -191,16 +188,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 20),
-
                 _buildInfoCard(
                   title: "Account Actions",
                   children: [
                     _buildActionTile(
                       Icons.edit_note_rounded,
                       "Edit Account Info",
-
                       () => _showEditProfileDialog(context, userData),
                     ),
                     _buildActionTile(
@@ -237,15 +231,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             TextButton(
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
-
                 if (context.mounted) {
-                  Navigator.pushAndRemoveUntil(
+                  Navigator.of(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const RoleSelectionScreen(),
-                    ),
-                    (route) => false,
-                  );
+                  ).pushNamedAndRemoveUntil('/', (route) => false);
                 }
               },
               child: const Text("Logout", style: TextStyle(color: Colors.red)),

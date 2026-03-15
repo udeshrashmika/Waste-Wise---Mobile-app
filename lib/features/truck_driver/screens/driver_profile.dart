@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:waste_wise/features/auth/screens/role_selection_screen.dart';
 
 class DriverProfileScreen extends StatefulWidget {
   const DriverProfileScreen({super.key});
@@ -32,17 +31,22 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
     try {
       User? currentUser = _auth.currentUser;
 
-      if (currentUser != null && currentUser.email != null) {
-        String email = currentUser.email!;
-
+      if (currentUser != null) {
         DocumentSnapshot userDoc = await _firestore
             .collection('users')
-            .doc(email)
+            .doc(currentUser.uid)
             .get();
+
+        if (!userDoc.exists && currentUser.email != null) {
+          userDoc = await _firestore
+              .collection('users')
+              .doc(currentUser.email)
+              .get();
+        }
 
         QuerySnapshot scheduleSnapshot = await _firestore
             .collection('schedules')
-            .where('driverId', isEqualTo: email)
+            .where('driverId', isEqualTo: currentUser.email)
             .where('status', isEqualTo: 'Completed')
             .get();
 
@@ -50,7 +54,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
           Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
           setState(() {
             driverName = data['name'] ?? "No Name";
-            driverEmail = data['email'] ?? email;
+            driverEmail = data['email'] ?? currentUser.email ?? "";
             vehicleNumber = data['vehicleNumber'] ?? "N/A";
             driverPhone = data['phone'] ?? "Add Phone Number";
             completedTrips = scheduleSnapshot.docs.length;
@@ -90,21 +94,15 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
         child: Column(
           children: [
             const SizedBox(height: 30),
-
-      
             _buildProfileImage(),
-
             const SizedBox(height: 20),
             Text(
               driverName,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 5),
-
             _buildVehicleBadge(),
-
             const SizedBox(height: 35),
-
             _buildInfoCard(
               title: "Performance Summary",
               children: [
@@ -121,9 +119,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
-
             _buildInfoCard(
               title: "Personal Information",
               children: [
@@ -146,9 +142,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
-
             _buildInfoCard(
               title: "Account Actions",
               children: [
@@ -167,6 +161,32 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
     );
   }
 
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to log out of Waste Wise?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/', (route) => false);
+              }
+            },
+            child: const Text("Logout", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildProfileImage() {
     return Container(
@@ -353,7 +373,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
         label,
         style: TextStyle(
           color: isLogout ? Colors.red : Colors.black87,
-          fontWeight: isLogout ? FontWeight.w600 : FontWeight.w500,
+          fontWeight: isLogout ? FontWeight.bold : FontWeight.w500,
           fontSize: 15,
         ),
       ),
@@ -361,31 +381,6 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
         Icons.chevron_right_rounded,
         color: Colors.grey,
         size: 20,
-      ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Logout"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const RoleSelectionScreen(),
-              ),
-              (r) => false,
-            ),
-            child: const Text("Logout"),
-          ),
-        ],
       ),
     );
   }
