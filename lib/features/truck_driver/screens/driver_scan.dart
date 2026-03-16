@@ -14,13 +14,13 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
   
   final MobileScannerController controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal, 
-    detectionTimeoutMs: 1000, 
+    detectionTimeoutMs: 2000, 
     facing: CameraFacing.back, 
     formats: const [BarcodeFormat.qrCode], 
     returnImage: false,
   );
 
-  bool isScanned = false; 
+  bool _isProcessing = false; 
 
   @override
   Widget build(BuildContext context) {
@@ -60,94 +60,128 @@ class _DriverScanScreenState extends State<DriverScanScreen> {
                     MobileScanner(
                       controller: controller,
                       onDetect: (capture) async {
-                        if (!isScanned) {
-                          final List<Barcode> barcodes = capture.barcodes;
-                          if (barcodes.isNotEmpty) {
-                            setState(() {
-                              isScanned = true; 
-                            });
+                        if (_isProcessing) return; 
 
-                            String binId = barcodes.first.rawValue?.trim() ?? "";
+                        final List<Barcode> barcodes = capture.barcodes;
+                        if (barcodes.isEmpty) return;
 
-                            if (binId.isEmpty) {
-                              setState(() => isScanned = false);
-                              return;
-                            }
+                        
+                        String scannedBinId = barcodes.first.rawValue?.trim() ?? "";
+                        if (scannedBinId.isEmpty) return;
 
+                        setState(() { _isProcessing = true; });
+
+                        try {
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user == null || user.email == null) throw Exception("User not logged in");
+
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Processing... Please wait ⏳")),
+                              const SnackBar(content: Text("Validating Bin... Please wait ⏳")),
                             );
-                            
-                            try {
-                              
-                              await FirebaseFirestore.instance.collection('bins').doc(binId).update({
-                                'status': 'Empty', 
-                                'fill_level': 0, 
-                                'levelCode': 0, 
-                                'last_collected': FieldValue.serverTimestamp(),
-                              });
+                          }
 
-                              
-                              final user = FirebaseAuth.instance.currentUser;
-                              if (user != null && user.email != null) {
-                                var scheduleQuery = await FirebaseFirestore.instance
-                                    .collection('schedules')
-                                    .where('driverId', isEqualTo: user.email)
-                                    .where('status', isEqualTo: 'In Progress') 
-                                    .limit(1)
-                                    .get();
-
-                                if (scheduleQuery.docs.isNotEmpty) {
-                                  var scheduleId = scheduleQuery.docs.first.id;
-                                  await FirebaseFirestore.instance
-                                      .collection('schedules')
-                                      .doc(scheduleId)
-                                      .update({'status': 'Completed'}); 
-                                }
-                              }
-
-                              
-                              
-                              String blockLetter = binId.split('-').first;
-                              String blockID = "Block $blockLetter"; 
-
-                              await FirebaseFirestore.instance.collection('notifications').add({
-                                'blockID': blockID,
-                                'type': 'collection',
-                                'title': 'Disposal Completed ✅',
-                                'message': 'Waste for $blockID has been successfully collected by the driver. Thank you for keeping the environment clean!',
-                                'timestamp': FieldValue.serverTimestamp(),
-                              });
-
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Success! Trip Completed & Residents Notified ✅"),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                                
-                                Future.delayed(const Duration(seconds: 2), () {
-                                  if (mounted) {
-                                    setState(() {
-                                      isScanned = false;
-                                    });
-                                  }
-                                });
-                              }
-                            } catch (error) {
-                              if (context.mounted) {
-                                setState(() {
-                                  isScanned = false;
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Failed: Bin not found or Error!"),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
+                          
+                          var binDoc = await FirebaseFirestore.instance.collection('bins').doc(scannedBinId).get();
+                          
+                          if (!binDoc.exists) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid QR Code! Bin not found in database."), backgroundColor: Colors.red));
                             }
+                            return;
+                          }
+
+                          
+                          String actualLocationName = binDoc.data()?['locationName'] ?? "";
+
+                          
+                          var scheduleQuery = await FirebaseFirestore.instance
+                              .collection('schedules')
+                              .where('driverId', isEqualTo: user.email)
+                              .get();
+
+                          var activeSchedules = scheduleQuery.docs.where((doc) {
+                            var status = (doc.data())['status'];
+                            return status != 'Completed';
+                          }).toList();
+
+                          if (activeSchedules.isEmpty) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No active tasks found!")));
+                            }
+                            return;
+                          }
+
+                          activeSchedules.sort((a, b) {
+                            var aTime = (a.data())['createdAt'] as Timestamp?;
+                            var bTime = (b.data())['createdAt'] as Timestamp?;
+                            if (aTime == null || bTime == null) return 0;
+                            return aTime.compareTo(bTime);
+                          });
+
+                          var currentTaskDoc = activeSchedules.first;
+                          String expectedRoute = currentTaskDoc.data()['route'] ?? "";
+
+                          
+                          if (actualLocationName != expectedRoute) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("Wrong Bin! ❌ You scanned $actualLocationName, but you should scan $expectedRoute"),
+                                  backgroundColor: Colors.red,
+                                  duration: const Duration(seconds: 4),
+                                ),
+                              );
+                            }
+                            return; 
+                          }
+
+                         
+                          await binDoc.reference.update({
+                            'status': 'Empty', 
+                            'fill_level': 0, 
+                            'levelCode': 0, 
+                            'last_collected': FieldValue.serverTimestamp(),
+                          });
+
+                          await FirebaseFirestore.instance
+                              .collection('schedules')
+                              .doc(currentTaskDoc.id)
+                              .update({'status': 'Completed'}); 
+
+                          String blockID = "Unknown Block";
+                          if (actualLocationName.contains('-')) {
+                            blockID = actualLocationName.split('-').first.trim(); 
+                          }
+
+                          await FirebaseFirestore.instance.collection('notifications').add({
+                            'blockID': blockID,
+                            'type': 'collection',
+                            'title': 'Disposal Completed ✅',
+                            'message': 'Waste for $blockID has been successfully collected by the driver.',
+                            'timestamp': FieldValue.serverTimestamp(),
+                          });
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Success! Trip Completed ✅"),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+
+                        } catch (error) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Error processing scan: $error"), backgroundColor: Colors.red),
+                            );
+                          }
+                        } finally {
+                          
+                          await Future.delayed(const Duration(seconds: 3));
+                          if (mounted) {
+                            setState(() { _isProcessing = false; });
                           }
                         }
                       },

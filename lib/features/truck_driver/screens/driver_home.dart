@@ -3,7 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:waste_wise/features/truck_driver/screens/driver_main_layout.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -15,6 +15,35 @@ class DriverHomeScreen extends StatefulWidget {
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
   final LatLng currentLoc = const LatLng(6.9344, 79.8428); 
   final LatLng destLoc = const LatLng(6.9147, 79.8516); 
+
+  
+  Future<void> _openNavigationMap(BuildContext context, String locationName) async {
+    try {
+      var binSnapshot = await FirebaseFirestore.instance.collection('bins').where('locationName', isEqualTo: locationName).limit(1).get();
+      double lat = 0.0, lng = 0.0;
+      if (binSnapshot.docs.isNotEmpty) {
+        var binData = binSnapshot.docs.first.data();
+        if (binData['Location'] is GeoPoint) {
+          lat = (binData['Location'] as GeoPoint).latitude;
+          lng = (binData['Location'] as GeoPoint).longitude;
+        } else {
+          lat = (binData['lat'] ?? 0.0).toDouble();
+          lng = (binData['lng'] ?? 0.0).toDouble();
+        }
+      }
+      if (lat == 0.0 && lng == 0.0) {
+        await launchUrl(Uri.parse("http://googleusercontent.com/maps.google.com/?q=${Uri.encodeComponent(locationName)}"), mode: LaunchMode.externalApplication);
+        return;
+      }
+      if (await canLaunchUrl(Uri.parse("google.navigation:q=$lat,$lng&mode=d"))) {
+        await launchUrl(Uri.parse("google.navigation:q=$lat,$lng&mode=d"));
+      } else {
+        await launchUrl(Uri.parse("http://googleusercontent.com/maps.google.com/?q=$lat,$lng"), mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not open map.")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,15 +77,26 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           }
 
           var allTasks = snapshot.data!.docs;
+          
+          
           var activeTasks = allTasks.where((doc) {
             var data = doc.data() as Map<String, dynamic>;
-            return data['status'] == 'Scheduled' || data['status'] == 'In Progress';
+            return data['status'] != 'Completed';
           }).toList();
+
+          
+          activeTasks.sort((a, b) {
+            var aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+            var bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+            if (aTime == null || bTime == null) return 0;
+            return aTime.compareTo(bTime);
+          });
 
           if (activeTasks.isEmpty) {
             return _buildNoTasksUI();
           }
 
+          
           var task = activeTasks.first; 
           Map<String, dynamic> data = task.data() as Map<String, dynamic>;
 
@@ -78,9 +118,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       
                       _buildRouteRow(Icons.explore_outlined, "Route Name", data['route'] ?? 'Unknown Route'),
                       const SizedBox(height: 15),
-                      _buildRouteRow(Icons.access_time_rounded, "Time", data['time'] ?? '00:00'),
+                      
+                      _buildRouteRow(Icons.access_time_rounded, "Time", "${data['date']} at ${data['time']}"),
                       const SizedBox(height: 15),
-                      _buildRouteRow(Icons.info_outline, "Status", data['status'] ?? 'No status'),
+                      _buildRouteRow(Icons.info_outline, "Status", data['status'] ?? 'Scheduled'),
                     ],
                   ),
                 ),
@@ -123,6 +164,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 ),
                 const SizedBox(height: 25),
 
+                
                 SizedBox(
                   width: double.infinity,
                   height: 55,
@@ -132,29 +174,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),
                     onPressed: () async {
-                       
-                       try {
-                         await FirebaseFirestore.instance
-                             .collection('schedules')
-                             .doc(task.id) 
-                             .update({'status': 'In Progress'});
-                         
-                         if (context.mounted) {
-                           Navigator.pushReplacement(
-                             context,
-                             MaterialPageRoute(
-                               builder: (context) => const DriverMainLayout(initialIndex: 1),
-                             ),
-                           );
-                         }
-                       } catch (e) {
-                         ScaffoldMessenger.of(context).showSnackBar(
-                           SnackBar(content: Text("Error updating status: $e")),
-                         );
-                       }
+                      
+                      try {
+                        await FirebaseFirestore.instance.collection('schedules').doc(task.id).update({'status': 'In Progress'});
+                        
+                        if (context.mounted) {
+                          _openNavigationMap(context, data['route'] ?? '');
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                        }
+                      }
                     },
-                    child: const Text("CONFIRM PICKUP",
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    child: const Text("CONFIRM PICKUP", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -166,7 +199,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  
   Widget _buildRouteRow(IconData icon, String label, String value) {
     return Row(
       children: [
