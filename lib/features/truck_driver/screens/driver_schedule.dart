@@ -7,92 +7,88 @@ class DriverScheduleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String currentDriverId = FirebaseAuth.instance.currentUser?.uid ?? "";
+    final user = FirebaseAuth.instance.currentUser;
+    const Color brandGreen = Color(0xFF1B5E36);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text(
-          "Trip History",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Trip History", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
       ),
+      body: user == null
+          ? const Center(child: Text("Please log in."))
+          : StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('schedules')
+                  .where('driverId', isEqualTo: user.email)
+                  .where('status', isEqualTo: 'Completed') 
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: brandGreen));
+                }
 
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('schedules')
-            .where('driverId', isEqualTo: currentDriverId)
-            .where('status', isEqualTo: 'Completed')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.history_rounded, size: 80, color: Colors.grey.shade300),
+                        const SizedBox(height: 15),
+                        const Text("No completed trips found.", style: TextStyle(color: Colors.grey, fontSize: 16)),
+                      ],
+                    ),
+                  );
+                }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No completed trips found."));
-          }
+                var completedTasks = snapshot.data!.docs.toList();
+                
+                
+                completedTasks.sort((a, b) {
+                  var aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                  var bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                  if (aTime == null || bTime == null) return 0;
+                  return bTime.compareTo(aTime); 
+                });
 
-          final trips = snapshot.data!.docs;
+                return ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: completedTasks.length,
+                  itemBuilder: (context, index) {
+                    var data = completedTasks[index].data() as Map<String, dynamic>;
+                    String routeName = data['route'] ?? 'Unknown Route';
+                    String date = data['date'] ?? 'N/A';
+                    String time = data['time'] ?? 'N/A';
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: trips.length,
-            itemBuilder: (context, index) {
-              var data = trips[index].data() as Map<String, dynamic>;
-
-              return _buildTripCard(
-                data['route'] ?? "Unknown Route",
-                data['time'] ?? "N/A",
-                data['date'] ?? "N/A",
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTripCard(String route, String time, String date) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: const Color(0xFFF5F5F5),
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(15),
-        child: Row(
-          children: [
-            const Icon(Icons.history, size: 40, color: Color(0xFF1B5E20)), //
-            const SizedBox(width: 20),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  route,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  "Completed: $date",
-                  style: const TextStyle(color: Colors.black54),
-                ),
-                Text(
-                  "Scheduled Time: $time",
-                  style: const TextStyle(color: Colors.black54),
-                ),
-              ],
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 15),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      elevation: 2,
+                      color: Colors.white,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(15),
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.green.shade50,
+                          child: const Icon(Icons.check_circle, color: brandGreen),
+                        ),
+                        title: Text(routeName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            "📅 $date  |  ⏰ $time\n✅ Status: Completed", 
+                            style: const TextStyle(color: Colors.black54, height: 1.4)
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
-          ],
-        ),
-      ),
     );
   }
 }

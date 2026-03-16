@@ -1,117 +1,96 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; 
-import 'package:url_launcher/url_launcher.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DriverStopsScreen extends StatelessWidget {
   const DriverStopsScreen({super.key});
 
-
-  Future<void> _openMap(double lat, double lng) async {
-    final Uri googleMapsAppUrl = Uri.parse("google.navigation:q=$lat,$lng&mode=d");
-    final Uri browserUrl = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng");
-
-    try {
-      if (await canLaunchUrl(googleMapsAppUrl)) {
-        await launchUrl(googleMapsAppUrl);
-      } else {
-        await launchUrl(browserUrl, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      debugPrint("Error launching map: $e");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    
-  
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text("Stops List", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text("Upcoming Stops", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
       ),
-      
-     
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('bins') 
-            
-           
-            .snapshots(),
-        builder: (context, snapshot) {
-          
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: user == null
+          ? const Center(child: Text("Please log in."))
+          : StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('schedules').where('driverId', isEqualTo: user.email).snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return _buildEmptyState();
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.delete_outline, size: 80, color: Colors.grey.shade300),
-                  const SizedBox(height: 10),
-                  const Text("No bins to collect!", style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            );
-          }
+                
+                var pendingTasks = snapshot.data!.docs.where((doc) => (doc.data() as Map<String, dynamic>)['status'] != 'Completed').toList();
+                
+                pendingTasks.sort((a, b) {
+                  var aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                  var bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                  if (aTime == null || bTime == null) return 0;
+                  return aTime.compareTo(bTime);
+                });
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              var bin = snapshot.data!.docs[index];
-              var data = bin.data() as Map<String, dynamic>;
+                
+                if (pendingTasks.length <= 1) return _buildEmptyState();
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                elevation: 3,
-                color: Colors.white,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(15),
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.green.shade50,
-                    child: const Icon(Icons.delete, color: Colors.green),
-                  ),
-                  title: Text(
-                    
-                    data['locationName'] ?? 'Unknown Bin',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    
-                    "Block: ${data['blockID'] ?? 'Unknown'} | Status: ${data['status'] ?? 'N/A'}"
-                  ),
-                  trailing: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1B5E20),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
-                    onPressed: () {
-                       
-                      
-                      double lat = data['lat'] ?? 0.0;
-                      double lng = data['lng'] ?? 0.0;
-                      _openMap(lat, lng);
-                    },
-                    icon: const Icon(Icons.navigation, size: 16),
-                    label: const Text("Navigate"),
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                
+                var upcomingTasks = pendingTasks.skip(1).toList();
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: upcomingTasks.length,
+                  itemBuilder: (context, index) {
+                    var data = upcomingTasks[index].data() as Map<String, dynamic>;
+                    String routeName = data['route'] ?? 'Unknown Route';
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 15),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      elevation: 2,
+                      color: Colors.white,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(15),
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.orange.shade50,
+                          child: Text("${index + 2}", style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 18)),
+                        ),
+                        title: Text(routeName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text("📅 ${data['date']}  |  ⏰ ${data['time']}", style: const TextStyle(color: Colors.black54)),
+                        ),
+                        trailing: const Chip(
+                          label: Text("Waiting", style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
+                          backgroundColor: Color(0xFFFFF3E0),
+                          side: BorderSide.none,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.pending_actions_rounded, size: 80, color: Colors.grey.shade300),
+          const SizedBox(height: 15),
+          const Text("No Upcoming Stops", style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 5),
+          const Text("All clear after your current task!", style: TextStyle(color: Colors.grey, fontSize: 14)),
+        ],
       ),
-       
     );
   }
 }
