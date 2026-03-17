@@ -18,7 +18,6 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
   String driverPhone = "Not Provided";
   String driverEmail = "";
   String vehicleNumber = "N/A";
-  int completedTrips = 0;
   bool isLoading = true;
 
   @override
@@ -44,12 +43,6 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
               .get();
         }
 
-        QuerySnapshot scheduleSnapshot = await _firestore
-            .collection('schedules')
-            .where('driverId', isEqualTo: currentUser.email)
-            .where('status', isEqualTo: 'Completed')
-            .get();
-
         if (userDoc.exists) {
           Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
           setState(() {
@@ -57,7 +50,6 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             driverEmail = data['email'] ?? currentUser.email ?? "";
             vehicleNumber = data['vehicleNumber'] ?? "N/A";
             driverPhone = data['phone'] ?? "Add Phone Number";
-            completedTrips = scheduleSnapshot.docs.length;
             isLoading = false;
           });
         }
@@ -103,22 +95,39 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             const SizedBox(height: 5),
             _buildVehicleBadge(),
             const SizedBox(height: 35),
+
             _buildInfoCard(
               title: "Performance Summary",
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   child: Center(
-                    child: _buildFeaturedStat(
-                      Icons.local_shipping_rounded,
-                      "Total Trips Completed",
-                      completedTrips.toString(),
-                      brandGreen,
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: _firestore
+                          .collection('schedules')
+                          .where('driverId', isEqualTo: driverEmail)
+                          .where('status', isEqualTo: 'Completed')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        String tripsCount = "0";
+
+                        if (snapshot.hasData) {
+                          tripsCount = snapshot.data!.docs.length.toString();
+                        }
+
+                        return _buildFeaturedStat(
+                          Icons.local_shipping_rounded,
+                          "Total Trips Completed",
+                          tripsCount,
+                          brandGreen,
+                        );
+                      },
                     ),
                   ),
                 ),
               ],
             ),
+
             const SizedBox(height: 20),
             _buildInfoCard(
               title: "Personal Information",
