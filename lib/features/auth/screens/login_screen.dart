@@ -5,7 +5,6 @@ import 'package:waste_wise/features/resident/screens/resident_main_layout.dart';
 import 'package:waste_wise/features/admin/screens/admin_main_layout.dart';
 import '../../truck_driver/screens/driver_main_layout.dart';
 import 'register_screen.dart';
-import '../../../services/auth_service.dart';
 
 class UniversalLoginScreen extends StatefulWidget {
   final String? initialRoleHint;
@@ -19,7 +18,6 @@ class UniversalLoginScreen extends StatefulWidget {
 class _UniversalLoginScreenState extends State<UniversalLoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
   bool _isLoading = false;
 
   @override
