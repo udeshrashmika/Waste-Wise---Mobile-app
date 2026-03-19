@@ -4,7 +4,7 @@
 
 🚀 Key Features
 
-##🏠 Resident Module
+## 🏠 Resident Module
 * **AI Bin Level Detection:** Upload photos of waste bins to automatically detect levels (Empty, Half, Full) using a trained **TFLite model**.
 * **Waste Categorization:** Categorize disposals as **Organic, Plastic, or Glass** to assist in efficient recycling.
 * **Real-time Alerts:** Receive instant notifications when a collection truck is nearby or schedules change.
